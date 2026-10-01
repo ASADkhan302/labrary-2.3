@@ -8,95 +8,13 @@ import {
   CheckCircle2, 
   Building2, 
   Download,
-  Palette,
-  Sun,
-  Moon,
-  Laptop,
   FolderOpen,
   Check,
   Sparkles,
   Loader2
 } from 'lucide-react';
-import { SystemSettings, LightThemeStyle } from '../types/library';
+import { SystemSettings } from '../types/library';
 import { LibraryStorage } from '../services/storage';
-import { useTheme } from '../context/ThemeContext';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-
-const LIGHT_THEME_OPTIONS: Array<{
-  id: LightThemeStyle;
-  name: string;
-  isDefault?: boolean;
-  page: string;
-  card: string;
-  raised: string;
-  border: string;
-  textPrimary: string;
-  textSecondary: string;
-  textMuted: string;
-  description: string;
-}> = [
-  {
-    id: 'blue-gray',
-    name: 'Blue-Gray',
-    isDefault: true,
-    page: '#EEF2F7',
-    card: '#F8FAFC',
-    raised: '#E6ECF4',
-    border: '#D5DDE8',
-    textPrimary: '#0F172A',
-    textSecondary: '#334155',
-    textMuted: '#5B6B80',
-    description: 'Crisp campus slate',
-  },
-  {
-    id: 'warm-cream',
-    name: 'Warm Cream',
-    page: '#F5F1E8',
-    card: '#FBF8F1',
-    raised: '#EDE7D9',
-    border: '#DDD5C3',
-    textPrimary: '#1C1917',
-    textSecondary: '#44403C',
-    textMuted: '#64594B',
-    description: 'Archival parchment tone',
-  },
-  {
-    id: 'sage-green',
-    name: 'Sage Green',
-    page: '#EDF3EF',
-    card: '#F6FAF7',
-    raised: '#E1EBE4',
-    border: '#D3E0D8',
-    textPrimary: '#0F1F17',
-    textSecondary: '#2F4A3B',
-    textMuted: '#52665A',
-    description: 'Botanical eye comfort',
-  },
-  {
-    id: 'mist-lavender',
-    name: 'Mist Lavender',
-    page: '#F1F0F8',
-    card: '#FAFAFE',
-    raised: '#E8E6F3',
-    border: '#D9D6EA',
-    textPrimary: '#17152B',
-    textSecondary: '#3B3757',
-    textMuted: '#5F5B7D',
-    description: 'Academic lilac mist',
-  },
-  {
-    id: 'slate-gray',
-    name: 'Slate Gray',
-    page: '#E2E8F0',
-    card: '#F1F5F9',
-    raised: '#D3DCE8',
-    border: '#BCC8D8',
-    textPrimary: '#0F172A',
-    textSecondary: '#1E293B',
-    textMuted: '#475569',
-    description: 'Executive neutral',
-  },
-];
 
 interface SettingsViewProps {
   settings: SystemSettings;
@@ -113,12 +31,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onPlayBootAnimation,
   onOpenStorageModal,
 }) => {
-  const { theme, isDark, toggleTheme, setTheme, lightThemeStyle, setLightThemeStyle } = useTheme();
-  const [formData, setFormData] = useState<SystemSettings>({ 
-    ...settings, 
-    theme: settings.theme || (isDark ? 'dark' : 'light'),
-    light_theme_style: settings.light_theme_style || lightThemeStyle,
-  });
+  const [formData, setFormData] = useState<SystemSettings>({ ...settings });
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -126,22 +39,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
-    setFormData(prev => ({
-      ...settings,
-      theme: isDark ? 'dark' : 'light',
-      light_theme_style: lightThemeStyle,
-    }));
-  }, [settings, isDark, lightThemeStyle]);
+    setFormData({ ...settings });
+  }, [settings]);
 
   const handleSave = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
     setTimeout(() => {
-      const updated: SystemSettings = { 
-        ...formData, 
-        theme: isDark ? 'dark' : 'light',
-        light_theme_style: lightThemeStyle,
-      };
+      const updated: SystemSettings = { ...formData };
       LibraryStorage.saveSettings(updated);
       onUpdateSettings(updated);
       setIsSaving(false);
@@ -223,244 +128,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
 
-        {/* APPEARANCE & THEME CONFIGURATION SECTION */}
-        <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-4 shadow-2xs transition-colors">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-              <Palette className="w-4 h-4 text-amber-500" />
-              <span>Appearance & Display Mode</span>
+        {/* Workstation Diagnostics & Boot Animation Ceremony */}
+        {onPlayBootAnimation && (
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs transition-colors flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>App Opening Animation Ceremony</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Play the university workstation boot sequence and diagnostic seal animation.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Active: <strong className="text-slate-800 dark:text-slate-200">{isDark ? 'Dark Theme' : 'Light Theme'}</strong>
-              </span>
-              <ThemeToggle 
-                variant="amber"
-                isDark={isDark} 
-                onToggle={toggleTheme} 
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Dark Mode Card */}
             <button
               type="button"
-              onClick={() => setTheme('dark')}
-              className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
-                theme === 'dark'
-                  ? 'border-amber-500 ring-2 ring-amber-500/20 bg-slate-100 dark:bg-slate-900/50' 
-                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
-              }`}
+              onClick={onPlayBootAnimation}
+              className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-bold font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <div className="p-2 rounded-lg bg-slate-800 text-amber-400 shrink-0">
-                <Moon className="w-4 h-4" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">Dark High-Contrast</span>
-                  {theme === 'dark' && <span className="text-[10px] font-mono text-amber-500 font-bold">ACTIVE</span>}
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Deep slate background (#020617) optimized for long library circulation shifts.
-                </p>
-              </div>
-            </button>
-
-            {/* Light Mode Card */}
-            <button
-              type="button"
-              onClick={() => setTheme('light')}
-              className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
-                theme === 'light'
-                  ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/50' 
-                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <div className="p-2 rounded-lg bg-amber-100 text-amber-800 shrink-0">
-                <Sun className="w-4 h-4" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">Light High-Contrast</span>
-                  {theme === 'light' && <span className="text-[10px] font-mono text-amber-600 font-bold">ACTIVE</span>}
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Clean crisp paper white background (#F8FAFC) for brightly lit campus reading rooms.
-                </p>
-              </div>
-            </button>
-
-            {/* System OS Follow Card */}
-            <button
-              type="button"
-              onClick={() => setTheme('system')}
-              className={`p-4 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
-                theme === 'system'
-                  ? 'border-amber-500 ring-2 ring-amber-500/20 bg-sky-50/50 dark:bg-sky-950/30' 
-                  : 'border-slate-200 dark:border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 shrink-0">
-                <Laptop className="w-4 h-4" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">Follow System (OS)</span>
-                  {theme === 'system' && <span className="text-[10px] font-mono text-sky-600 dark:text-sky-400 font-bold">ACTIVE</span>}
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Automatically syncs with Windows / macOS / Linux system dark or light appearance.
-                </p>
-              </div>
+              <span>⚡ Play Boot Intro</span>
             </button>
           </div>
-
-          {/* LIGHT THEME STYLE PICKER (5 SWATCH CARDS WITH LIVE PREVIEW) */}
-          <div className="pt-4 border-t border-slate-200/80 dark:border-[#1E293B] space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">Light theme style</h4>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 font-bold">
-                    Default: Blue-Gray
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Replaces harsh pure white in light mode with 5 curated campus reading room palettes. Select one to apply instantly with no reload.
-                </p>
-              </div>
-              <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                Active: <strong className="text-slate-900 dark:text-slate-100 capitalize font-bold">{lightThemeStyle.replace('-', ' ')}</strong>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {LIGHT_THEME_OPTIONS.map((themeOption) => {
-                const isSelected = lightThemeStyle === themeOption.id;
-                return (
-                  <button
-                    key={themeOption.id}
-                    type="button"
-                    onClick={() => setLightThemeStyle(themeOption.id)}
-                    className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer relative overflow-hidden group ${
-                      isSelected
-                        ? 'border-blue-600 dark:border-blue-500 ring-2 ring-blue-500/30 bg-blue-50/40 dark:bg-blue-950/20 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white/40 dark:bg-slate-900/30'
-                    }`}
-                  >
-                    {/* Header with Title and Status Badges */}
-                    <div className="flex items-center justify-between gap-1 mb-2.5 w-full">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {themeOption.name}
-                      </span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {themeOption.isDefault && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            Default
-                          </span>
-                        )}
-                        {isSelected && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white flex items-center gap-0.5">
-                            <Check className="w-2.5 h-2.5" />
-                            Active
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Small Live Preview (Page, Card, Text Sample) */}
-                    <div 
-                      data-swatch-preview="true"
-                      className="w-full rounded-lg p-2.5 transition-transform group-hover:scale-[1.01] shadow-2xs border"
-                      style={{ 
-                        backgroundColor: themeOption.page,
-                        borderColor: themeOption.border,
-                      }}
-                    >
-                      {/* Live Card Sample */}
-                      <div 
-                        className="rounded-md p-2 shadow-2xs border"
-                        style={{
-                          backgroundColor: themeOption.card,
-                          borderColor: themeOption.border,
-                        }}
-                      >
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <span 
-                            className="text-[11px] font-bold tracking-tight truncate leading-none"
-                            style={{ color: themeOption.textPrimary }}
-                          >
-                            Catalog Card
-                          </span>
-                          <span 
-                            className="text-[9px] font-semibold px-1 rounded"
-                            style={{ 
-                              backgroundColor: themeOption.raised,
-                              color: themeOption.textSecondary 
-                            }}
-                          >
-                            #01
-                          </span>
-                        </div>
-                        <p 
-                          className="text-[10px] leading-tight line-clamp-1 mb-2"
-                          style={{ color: themeOption.textMuted }}
-                        >
-                          Book Title &amp; Author
-                        </p>
-                        {/* Mini button preview: #2563EB with white text */}
-                        <div className="flex items-center justify-between">
-                          <span 
-                            className="text-[9px] font-medium"
-                            style={{ color: themeOption.textSecondary }}
-                          >
-                            Available
-                          </span>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-[#2563EB] text-white shadow-2xs">
-                            Loan
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Footer description & color swatches */}
-                    <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                      <span className="truncate text-[10px]">{themeOption.description}</span>
-                      <div className="flex items-center -space-x-1 shrink-0 ml-1">
-                        <span className="w-2.5 h-2.5 rounded-full border border-black/10 shadow-xs" style={{ backgroundColor: themeOption.page }} title={`Page: ${themeOption.page}`} />
-                        <span className="w-2.5 h-2.5 rounded-full border border-black/10 shadow-xs" style={{ backgroundColor: themeOption.card }} title={`Card: ${themeOption.card}`} />
-                        <span className="w-2.5 h-2.5 rounded-full border border-black/10 shadow-xs" style={{ backgroundColor: themeOption.border }} title={`Border: ${themeOption.border}`} />
-                        <span className="w-2.5 h-2.5 rounded-full border border-black/10 shadow-xs" style={{ backgroundColor: themeOption.textPrimary }} title={`Text: ${themeOption.textPrimary}`} />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {onPlayBootAnimation && (
-            <div className="pt-2 border-t border-slate-200/80 dark:border-[#1E293B] flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  App Opening Animation Ceremony
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Play the university workstation boot sequence and diagnostic seal animation.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={onPlayBootAnimation}
-                className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-bold font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span>⚡ Play Boot Intro</span>
-              </button>
-            </div>
-          )}
-        </div>
+        )}
 
         <form onSubmit={handleSave} className="space-y-6">
           {/* Institutional Information */}

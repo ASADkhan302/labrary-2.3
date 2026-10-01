@@ -440,8 +440,6 @@ export const INITIAL_SETTINGS: SystemSettings = {
   auto_submit_scan: true,
   scanner_sound: true,
   error_sound: true,
-  theme: 'dark',
-  light_theme_style: 'blue-gray',
   db_path: 'C:\\ProgramData\\ULM_LMS\\library.db',
   wal_mode: true,
   station_id: 'LMS-WIN-01',

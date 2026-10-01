@@ -122,31 +122,18 @@ export interface ContrastViolation {
 export function runContrastCheck(): ContrastViolation[] {
   if (typeof window === 'undefined') return [];
 
-  const isDark = document.documentElement.classList.contains('dark') || !document.documentElement.classList.contains('light');
-  const lightThemeStyle = document.documentElement.getAttribute('data-light-theme') || 'blue-gray';
-
-  const THEME_PAGE_BG: Record<string, { r: number; g: number; b: number; a: number }> = {
-    'blue-gray': { r: 238, g: 242, b: 247, a: 1 },    // #EEF2F7
-    'warm-cream': { r: 245, g: 241, b: 232, a: 1 },   // #F5F1E8
-    'sage-green': { r: 237, g: 243, b: 239, a: 1 },   // #EDF3EF
-    'mist-lavender': { r: 241, g: 240, b: 248, a: 1 },// #F1F0F8
-    'slate-gray': { r: 226, g: 232, b: 240, a: 1 },   // #E2E8F0
-  };
-
   const bodyBgParsed = parseColor(window.getComputedStyle(document.body).backgroundColor);
-  const defaultBg = isDark
-    ? { r: 2, g: 6, b: 23, a: 1 } // #020617
-    : (bodyBgParsed && bodyBgParsed.a >= 0.99 ? bodyBgParsed : (THEME_PAGE_BG[lightThemeStyle] || { r: 238, g: 242, b: 247, a: 1 }));
+  const defaultBg = bodyBgParsed && bodyBgParsed.a >= 0.99 
+    ? bodyBgParsed 
+    : { r: 2, g: 6, b: 23, a: 1 }; // #020617 fixed dark canvas
 
   const violations: ContrastViolation[] = [];
   const elements = document.querySelectorAll<HTMLElement>('body *');
 
   elements.forEach((el) => {
-    // Skip invisible, empty, printable barcode labels, book mock covers, or swatch preview cards
+    // Skip invisible, empty, or printable barcode labels
     if (!el.offsetParent && el.tagName !== 'BODY') return;
     if (el.closest('#printable-barcode-label') || el.closest('[data-barcode-container="true"]')) return;
-    if (el.closest('[data-preserve-dark="true"]')) return;
-    if (el.closest('[data-swatch-preview="true"]')) return;
 
     const style = window.getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0) return;
@@ -222,13 +209,12 @@ export function runContrastCheck(): ContrastViolation[] {
 
   if (violations.length === 0) {
     console.log(
-      `%c[Contrast Checker] PASS: All scanned text elements meet WCAG AAA/AA standards (Theme: ${isDark ? 'Dark' : 'Light'} | Style: ${lightThemeStyle}).`,
+      '%c[Contrast Checker] PASS: All scanned text elements meet WCAG AAA/AA standards (Dark Theme).',
       'color: #10B981; font-weight: bold;'
     );
   } else {
-    // Pure serializable JSON format - perfectly safe for AI Studio / devtools postMessage bridges
     console.warn(
-      `%c[Contrast Checker] Found ${violations.length} contrast warnings (Theme: ${isDark ? 'Dark' : 'Light'} | Style: ${lightThemeStyle}):`,
+      `%c[Contrast Checker] Found ${violations.length} contrast warnings (Dark Theme):`,
       'color: #F59E0B; font-weight: bold;',
       JSON.parse(JSON.stringify(violations))
     );
@@ -237,55 +223,7 @@ export function runContrastCheck(): ContrastViolation[] {
   return violations;
 }
 
-export async function checkAllThemes(): Promise<Record<string, ContrastViolation[]>> {
-  if (typeof window === 'undefined') return {};
-  const themes = ['blue-gray', 'warm-cream', 'sage-green', 'mist-lavender', 'slate-gray'];
-  const results: Record<string, ContrastViolation[]> = {};
-
-  const originalTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-  const originalStyle = document.documentElement.getAttribute('data-light-theme') || 'blue-gray';
-
-  // Test light themes
-  document.documentElement.classList.remove('dark');
-  document.documentElement.classList.add('light');
-  document.body.classList.remove('dark');
-  document.body.classList.add('light');
-
-  for (const t of themes) {
-    document.documentElement.setAttribute('data-light-theme', t);
-    document.body.setAttribute('data-light-theme', t);
-    await new Promise(r => setTimeout(r, 60));
-    results[`light-${t}`] = runContrastCheck();
-  }
-
-  // Test dark theme
-  document.documentElement.classList.remove('light');
-  document.documentElement.classList.add('dark');
-  document.body.classList.remove('light');
-  document.body.classList.add('dark');
-  await new Promise(r => setTimeout(r, 60));
-  results['dark'] = runContrastCheck();
-
-  // Restore
-  if (originalTheme === 'dark') {
-    document.documentElement.classList.remove('light');
-    document.documentElement.classList.add('dark');
-    document.body.classList.remove('light');
-    document.body.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-    document.documentElement.classList.add('light');
-    document.body.classList.remove('dark');
-    document.body.classList.add('light');
-  }
-  document.documentElement.setAttribute('data-light-theme', originalStyle);
-  document.body.setAttribute('data-light-theme', originalStyle);
-
-  return results;
-}
-
 // Attach to window for dev inspection
 if (typeof window !== 'undefined') {
-  (window as unknown as { runContrastCheck: typeof runContrastCheck; checkAllThemes: typeof checkAllThemes }).runContrastCheck = runContrastCheck;
-  (window as unknown as { runContrastCheck: typeof runContrastCheck; checkAllThemes: typeof checkAllThemes }).checkAllThemes = checkAllThemes;
+  (window as unknown as { runContrastCheck: typeof runContrastCheck }).runContrastCheck = runContrastCheck;
 }

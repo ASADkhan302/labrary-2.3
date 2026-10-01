@@ -10,7 +10,6 @@ import {
   HardDrive 
 } from 'lucide-react';
 import { NavigationTab } from '../types/library';
-import { useTheme } from '../context/ThemeContext';
 
 interface PrimaryHeaderProps {
   activeTab: NavigationTab;
@@ -42,7 +41,6 @@ export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
   universityName = 'University of Lakki Marwat',
   libraryName = 'Campus Catalog & Circulation',
 }) => {
-  const { isDark } = useTheme();
   const [isRotating, setIsRotating] = useState(false);
 
   const handleRefreshClick = () => {

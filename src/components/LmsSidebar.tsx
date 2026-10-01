@@ -18,8 +18,6 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { NavigationTab, Book } from '../types/library';
-import { useTheme } from '../context/ThemeContext';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export type LmsNavItemData = {
   id: NavigationTab | 'search';
@@ -66,7 +64,6 @@ export function LmsSidebar({
   universityName = 'University of Lakki Marwat',
   libraryName = 'Central Campus Library',
 }: LmsSidebarProps) {
-  const { isDark, toggleTheme } = useTheme();
   const [selectedCampus, setSelectedCampus] = useState('Central Campus LMS');
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [internalIsSearchOpen, setInternalIsSearchOpen] = useState(false);
@@ -349,20 +346,6 @@ export function LmsSidebar({
               </button>
             );
           })}
-
-          {/* Theme Quick Toggle */}
-          {!isCollapsed ? (
-            <div className="flex items-center justify-between px-3 h-10 rounded-[8px] border border-[var(--border)] bg-black/5 dark:bg-white/[0.02]">
-              <span className="text-[12px] font-medium text-[var(--text-muted)]">
-                {isDark ? 'Dark Mode' : 'Light Mode'}
-              </span>
-              <ThemeToggle isDark={isDark} onToggle={toggleTheme} className="scale-90 origin-right" />
-            </div>
-          ) : (
-            <div className="flex justify-center py-1">
-              <ThemeToggle isDark={isDark} onToggle={toggleTheme} className="scale-75" />
-            </div>
-          )}
 
           {/* Collapse/Expand Sidebar Toggle */}
           <button

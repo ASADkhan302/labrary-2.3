@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
-@custom-variant light (&:where(.light, .light *));
 
 @layer base {
   :root {
+    color-scheme: dark;
+
     --font-cinzel: 'Cinzel', Georgia, serif;
     --font-cinzel-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -45,6 +46,7 @@
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.45);
+    --modal-backdrop: rgba(0, 0, 0, 0.7);
 
     /* MOTION TOKENS */
     --duration-micro: 120ms;
@@ -62,215 +64,6 @@
     --chart-3: #F59E0B;
     --chart-4: #8B5CF6;
     --chart-5: #F43F5E;
-  }
-
-  /* 1. Default & Blue-Gray Light Theme */
-  :root.light,
-  html.light,
-  body.light,
-  .light,
-  [data-light-theme="blue-gray"].light,
-  [data-light-theme="blue-gray"] .light,
-  .light[data-light-theme="blue-gray"],
-  .light [data-light-theme="blue-gray"] {
-    --accent: #2563EB;
-    --accent-hover: #1D4ED8;
-    --accent-active: #1E40AF;
-    --accent-tint: rgba(37, 99, 235, 0.08);
-    --accent-border: rgba(29, 78, 216, 0.35);
-    --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
-
-    --background: #EEF2F7;
-    --card: #F8FAFC;
-    --card-foreground: #0F172A;
-    --surface: #F8FAFC;
-    --surface-secondary: #E6ECF4;
-
-    --text-primary: #0F172A;
-    --text-secondary: #334155;
-    --text-muted: #5B6B80;
-    --text-accent: #1D4ED8;
-    --text-on-accent: #FFFFFF;
-    --text-placeholder: #5B6B80;
-
-    --border: #D5DDE8;
-    --border-hover: #C2CCD9;
-    --border-control: #C2CCD9;
-
-    --overlay-hover: rgba(15, 23, 42, 0.05);
-    --overlay-active: rgba(15, 23, 42, 0.08);
-
-    --control-bg: #F8FAFC;
-    --control-h-default: 40px;
-    --control-h-compact: 32px;
-
-    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
-    --shadow-modal: 0 24px 48px rgba(15, 23, 42, 0.18);
-    --modal-backdrop: rgba(15, 23, 42, 0.45);
-  }
-
-  /* 2. Warm Cream Light Theme */
-  [data-light-theme="warm-cream"].light,
-  [data-light-theme="warm-cream"] .light,
-  .light[data-light-theme="warm-cream"],
-  .light [data-light-theme="warm-cream"] {
-    --accent: #2563EB;
-    --accent-hover: #1D4ED8;
-    --accent-active: #1E40AF;
-    --accent-tint: rgba(37, 99, 235, 0.08);
-    --accent-border: rgba(29, 78, 216, 0.35);
-    --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
-
-    --background: #F5F1E8;
-    --card: #FBF8F1;
-    --card-foreground: #1C1917;
-    --surface: #FBF8F1;
-    --surface-secondary: #EDE7D9;
-
-    --text-primary: #1C1917;
-    --text-secondary: #44403C;
-    --text-muted: #64594B;
-    --text-accent: #1D4ED8;
-    --text-on-accent: #FFFFFF;
-    --text-placeholder: #64594B;
-
-    --border: #DDD5C3;
-    --border-hover: #CCC3B0;
-    --border-control: #CCC3B0;
-
-    --overlay-hover: rgba(15, 23, 42, 0.05);
-    --overlay-active: rgba(15, 23, 42, 0.08);
-
-    --control-bg: #FBF8F1;
-    --control-h-default: 40px;
-    --control-h-compact: 32px;
-
-    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
-    --shadow-modal: 0 24px 48px rgba(15, 23, 42, 0.18);
-    --modal-backdrop: rgba(15, 23, 42, 0.45);
-  }
-
-  /* 3. Sage Green Light Theme */
-  [data-light-theme="sage-green"].light,
-  [data-light-theme="sage-green"] .light,
-  .light[data-light-theme="sage-green"],
-  .light [data-light-theme="sage-green"] {
-    --accent: #2563EB;
-    --accent-hover: #1D4ED8;
-    --accent-active: #1E40AF;
-    --accent-tint: rgba(37, 99, 235, 0.08);
-    --accent-border: rgba(29, 78, 216, 0.35);
-    --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
-
-    --background: #EDF3EF;
-    --card: #F6FAF7;
-    --card-foreground: #0F1F17;
-    --surface: #F6FAF7;
-    --surface-secondary: #E1EBE4;
-
-    --text-primary: #0F1F17;
-    --text-secondary: #2F4A3B;
-    --text-muted: #52665A;
-    --text-accent: #1D4ED8;
-    --text-on-accent: #FFFFFF;
-    --text-placeholder: #52665A;
-
-    --border: #D3E0D8;
-    --border-hover: #BFD0C5;
-    --border-control: #BFD0C5;
-
-    --overlay-hover: rgba(15, 23, 42, 0.05);
-    --overlay-active: rgba(15, 23, 42, 0.08);
-
-    --control-bg: #F6FAF7;
-    --control-h-default: 40px;
-    --control-h-compact: 32px;
-
-    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
-    --shadow-modal: 0 24px 48px rgba(15, 23, 42, 0.18);
-    --modal-backdrop: rgba(15, 23, 42, 0.45);
-  }
-
-  /* 4. Mist Lavender Light Theme */
-  [data-light-theme="mist-lavender"].light,
-  [data-light-theme="mist-lavender"] .light,
-  .light[data-light-theme="mist-lavender"],
-  .light [data-light-theme="mist-lavender"] {
-    --accent: #2563EB;
-    --accent-hover: #1D4ED8;
-    --accent-active: #1E40AF;
-    --accent-tint: rgba(37, 99, 235, 0.08);
-    --accent-border: rgba(29, 78, 216, 0.35);
-    --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
-
-    --background: #F1F0F8;
-    --card: #FAFAFE;
-    --card-foreground: #17152B;
-    --surface: #FAFAFE;
-    --surface-secondary: #E8E6F3;
-
-    --text-primary: #17152B;
-    --text-secondary: #3B3757;
-    --text-muted: #5F5B7D;
-    --text-accent: #1D4ED8;
-    --text-on-accent: #FFFFFF;
-    --text-placeholder: #5F5B7D;
-
-    --border: #D9D6EA;
-    --border-hover: #C6C2DB;
-    --border-control: #C6C2DB;
-
-    --overlay-hover: rgba(15, 23, 42, 0.05);
-    --overlay-active: rgba(15, 23, 42, 0.08);
-
-    --control-bg: #FAFAFE;
-    --control-h-default: 40px;
-    --control-h-compact: 32px;
-
-    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
-    --shadow-modal: 0 24px 48px rgba(15, 23, 42, 0.18);
-    --modal-backdrop: rgba(15, 23, 42, 0.45);
-  }
-
-  /* 5. Slate Gray Light Theme */
-  [data-light-theme="slate-gray"].light,
-  [data-light-theme="slate-gray"] .light,
-  .light[data-light-theme="slate-gray"],
-  .light [data-light-theme="slate-gray"] {
-    --accent: #2563EB;
-    --accent-hover: #1D4ED8;
-    --accent-active: #1E40AF;
-    --accent-tint: rgba(37, 99, 235, 0.08);
-    --accent-border: rgba(29, 78, 216, 0.35);
-    --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
-
-    --background: #E2E8F0;
-    --card: #F1F5F9;
-    --card-foreground: #0F172A;
-    --surface: #F1F5F9;
-    --surface-secondary: #D3DCE8;
-
-    --text-primary: #0F172A;
-    --text-secondary: #1E293B;
-    --text-muted: #475569;
-    --text-accent: #1D4ED8;
-    --text-on-accent: #FFFFFF;
-    --text-placeholder: #475569;
-
-    --border: #BCC8D8;
-    --border-hover: #A8B7C9;
-    --border-control: #A8B7C9;
-
-    --overlay-hover: rgba(15, 23, 42, 0.05);
-    --overlay-active: rgba(15, 23, 42, 0.08);
-
-    --control-bg: #F1F5F9;
-    --control-h-default: 40px;
-    --control-h-compact: 32px;
-
-    --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
-    --shadow-modal: 0 24px 48px rgba(15, 23, 42, 0.18);
-    --modal-backdrop: rgba(15, 23, 42, 0.45);
   }
 
   /* Semantic Design System Utility Classes */
@@ -581,10 +374,6 @@ button.bg-amber-500:not(.btn-secondary):not(.btn-danger):hover:not(:disabled):no
   border-color: var(--border-hover) !important;
 }
 
-.light .btn-secondary:hover:not(:disabled):not(:active) {
-  background-color: #F1F5F9 !important;
-}
-
 /* Danger Button: tinted red background with high-contrast text */
 .btn-danger {
   background-color: rgba(252, 165, 165, 0.15) !important;
@@ -604,12 +393,6 @@ button.bg-amber-500:not(.btn-secondary):not(.btn-danger):hover:not(:disabled):no
 .btn-danger:hover:not(:disabled):not(:active) {
   background-color: rgba(252, 165, 165, 0.25) !important;
   transform: translateY(-1px);
-}
-
-.light .btn-danger {
-  background-color: #FEE2E2 !important;
-  color: #991B1B !important;
-  border-color: rgba(252, 165, 165, 0.4) !important;
 }
 
 /* Icon Buttons with gentle scale 1.08 on hover */
@@ -635,11 +418,6 @@ button.bg-amber-500:not(.btn-secondary):not(.btn-danger):hover:not(:disabled):no
   border-color: var(--border);
 }
 
-.light .btn-icon:hover:not(:disabled):not(:active) {
-  background-color: #F1F5F9;
-  border-color: var(--border);
-}
-
 /* Visible Keyboard Focus */
 button:focus-visible,
 [role="button"]:focus-visible,
@@ -662,10 +440,6 @@ a:focus-visible {
   transition: transform 400ms var(--ease-out), opacity 400ms ease-out;
   background-color: rgba(255, 255, 255, 0.25);
   z-index: 10;
-}
-
-.light .btn-ripple-wave {
-  background-color: rgba(59, 130, 246, 0.2);
 }
 
 /* ==========================================================================
@@ -781,15 +555,6 @@ a:focus-visible {
   font-size: 12px !important;
 }
 
-.light .badge-available,
-.light .badge-success,
-.light [class*="bg-emerald-500/10"],
-.light [class*="bg-emerald-500/15"] {
-  background-color: #DCFCE7 !important;
-  color: #166534 !important;
-  border-color: #BBF7D0 !important;
-}
-
 .badge-due-soon,
 .badge-warning,
 [class*="bg-amber-500/10"],
@@ -799,15 +564,6 @@ a:focus-visible {
   border-color: rgba(252, 211, 77, 0.3) !important;
   border-radius: 9999px !important;
   font-size: 12px !important;
-}
-
-.light .badge-due-soon,
-.light .badge-warning,
-.light [class*="bg-amber-500/10"],
-.light [class*="bg-amber-500/15"] {
-  background-color: #FEF3C7 !important;
-  color: #92400E !important;
-  border-color: #FDE68A !important;
 }
 
 .badge-overdue,
@@ -823,17 +579,6 @@ a:focus-visible {
   font-size: 12px !important;
 }
 
-.light .badge-overdue,
-.light .badge-danger,
-.light [class*="bg-rose-500/10"],
-.light [class*="bg-rose-500/15"],
-.light [class*="bg-red-500/10"],
-.light [class*="bg-red-500/15"] {
-  background-color: #FEE2E2 !important;
-  color: #991B1B !important;
-  border-color: #FECACA !important;
-}
-
 .badge-accent,
 .badge-info,
 [class*="bg-blue-500/10"],
@@ -843,15 +588,6 @@ a:focus-visible {
   border-color: rgba(147, 197, 253, 0.3) !important;
   border-radius: 9999px !important;
   font-size: 12px !important;
-}
-
-.light .badge-accent,
-.light .badge-info,
-.light [class*="bg-blue-500/10"],
-.light [class*="bg-blue-500/15"] {
-  background-color: #DBEAFE !important;
-  color: #1E40AF !important;
-  border-color: #BFDBFE !important;
 }
 
 /* ==========================================================================
@@ -924,10 +660,6 @@ table tbody tr:hover td {
   background-color: rgba(255, 255, 255, 0.03) !important;
 }
 
-.light table tbody tr:hover td {
-  background-color: rgba(15, 23, 42, 0.04) !important;
-}
-
 /* Staggered entrance for the first 10 rows (20ms each) */
 table tbody tr:nth-child(1) { animation: rowFadeIn 200ms var(--ease-out) 0ms forwards; }
 table tbody tr:nth-child(2) { animation: rowFadeIn 200ms var(--ease-out) 20ms forwards; }
@@ -980,16 +712,6 @@ tr.row-new {
   background-size: 200% 100%;
   animation: shimmerSweep 1.4s infinite linear;
   border-radius: 8px;
-}
-
-.light .skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(226, 232, 240, 0.6) 0%,
-    rgba(203, 213, 225, 0.9) 50%,
-    rgba(226, 232, 240, 0.6) 100%
-  );
-  background-size: 200% 100%;
 }
 
 @keyframes shimmerSweep {
@@ -1258,151 +980,13 @@ tr.row-new {
   background: rgba(148, 163, 184, 0.4);
 }
 
-.light ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-}
-
-.light ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
-}
-
-/* ==========================================================================
-   16. LIGHT MODE SURFACE & TEXT NORMALIZATION (WCAG AAA/AA)
-   ========================================================================== */
-
-.light,
-html.light,
-body.light {
-  background-color: var(--background) !important;
-  color: var(--text-primary) !important;
-}
-
 .bg-fluent-matrix {
   background-color: var(--background);
   color: var(--text-primary);
 }
 
-.light .bg-\[\#020617\],
-.light .bg-\[\#030712\],
-.light .bg-\[\#060911\],
-.light [class*="bg-[#020617]"],
-.light [class*="bg-[#030712]"],
-.light [class*="bg-[#060911]"] {
-  background-color: var(--background) !important;
-}
-
-.light .bg-\[\#0B1220\],
-.light .bg-\[\#0A0F1D\],
-.light [class*="bg-[#0B1220]"],
-.light [class*="bg-[#0A0F1D]"] {
-  background-color: var(--card) !important;
-}
-
-.light .bg-\[\#0F172A\]:not(button):not(.badge):not([class*="text-"]):not([data-preserve-dark="true"]):not(#printable-barcode-label):not(#printable-barcode-label *):not([data-barcode-container="true"]):not([data-barcode-container="true"] *),
-.light [class*="bg-[#0F172A]"]:not(button):not(.badge):not([class*="text-"]):not([data-preserve-dark="true"]):not(#printable-barcode-label):not(#printable-barcode-label *):not([data-barcode-container="true"]):not([data-barcode-container="true"] *) {
-  background-color: var(--card) !important;
-}
-
-.light .border-\[\#1E293B\],
-.light .border-\[\#334155\],
-.light .border-slate-800,
-.light .border-slate-700,
-.light .border-\[rgba\(148\,163\,184\,0\.16\)\],
-.light [class*="border-[#1E293B]"],
-.light [class*="border-[#334155]"],
-.light [class*="border-slate-800"],
-.light [class*="border-slate-700"],
-.light [class*="border-[rgba(148,163,184"] {
-  border-color: var(--border) !important;
-}
-
-.light .text-\[\#F1F5F9\],
-.light .text-\[\#E2E8F0\],
-.light .text-\[\#F8FAFC\],
-.light .text-slate-100,
-.light .text-slate-200,
-.light [class*="text-[#F1F5F9]"],
-.light [class*="text-[#E2E8F0]"],
-.light [class*="text-[#F8FAFC]"],
-.light [class*="text-slate-100"],
-.light [class*="text-slate-200"],
-.light .text-white:not(.btn-primary):not(.btn-primary *):not([class*="bg-blue-600"]):not([class*="bg-blue-600"] *):not([class*="bg-blue-500"]):not([class*="bg-blue-500"] *):not([class*="bg-emerald-600"]):not([class*="bg-emerald-600"] *):not([class*="bg-emerald-500"]):not([class*="bg-emerald-500"] *):not([class*="bg-rose-600"]):not([class*="bg-rose-600"] *):not([class*="bg-red-600"]):not([class*="bg-red-600"] *):not([class*="bg-amber-500"]):not([class*="bg-amber-500"] *):not([data-preserve-white="true"]),
-.light [class*="text-white"]:not(.btn-primary):not(.btn-primary *):not([class*="bg-blue-600"]):not([class*="bg-blue-600"] *):not([class*="bg-blue-500"]):not([class*="bg-blue-500"] *):not([class*="bg-emerald-600"]):not([class*="bg-emerald-600"] *):not([class*="bg-emerald-500"]):not([class*="bg-emerald-500"] *):not([class*="bg-rose-600"]):not([class*="bg-rose-600"] *):not([class*="bg-red-600"]):not([class*="bg-red-600"] *):not([class*="bg-amber-500"]):not([class*="bg-amber-500"] *):not([data-preserve-white="true"]) {
-  color: var(--text-primary) !important;
-}
-
-.light .text-\[\#CBD5E1\],
-.light .text-slate-300,
-.light [class*="text-[#CBD5E1]"],
-.light [class*="text-slate-300"] {
-  color: var(--text-secondary) !important;
-}
-
-.light .text-\[\#94A3B8\],
-.light .text-slate-400,
-.light .text-slate-500,
-.light [class*="text-[#94A3B8]"],
-.light [class*="text-slate-400"],
-.light [class*="text-slate-500"] {
-  color: var(--text-muted) !important;
-}
-
-.light .text-\[\#60A5FA\],
-.light [class*="text-[#60A5FA]"] {
-  color: var(--text-accent) !important;
-}
-
-/* Primary buttons and solid action buttons enforce pure white text */
-.light .btn-primary,
-.light .btn-primary *,
-.light button[class*="bg-blue-600"],
-.light button[class*="bg-blue-600"] *,
-.light button[class*="bg-blue-500"],
-.light button[class*="bg-blue-500"] *,
-.light button[class*="bg-emerald-600"],
-.light button[class*="bg-emerald-600"] *,
-.light button[class*="bg-emerald-500"],
-.light button[class*="bg-emerald-500"] *,
-.light button[class*="bg-rose-600"],
-.light button[class*="bg-rose-600"] *,
-.light button[class*="bg-red-600"],
-.light button[class*="bg-red-600"] * {
-  color: #FFFFFF !important;
-}
-
-/* Light mode hover and overlays */
-.light .hover\:bg-white\/\[0\.04\]:hover,
-.light .hover\:bg-white\/\[0\.05\]:hover,
-.light .hover\:bg-white\/\[0\.06\]:hover,
-.light .hover\:bg-white\/10:hover {
-  background-color: var(--overlay-hover) !important;
-}
-
-.light .bg-white\/\[0\.02\],
-.light .bg-white\/\[0\.03\],
-.light .bg-white\/\[0\.04\] {
-  background-color: var(--overlay-hover) !important;
-}
-
-.light .modal-backdrop,
-.light .fixed.inset-0.z-50:has([class*="max-w-"]) {
-  background-color: var(--modal-backdrop) !important;
-}
-
-/* Barcode labels for printing stay pure white on purpose so scanners read them */
-#printable-barcode-label,
-#printable-barcode-label *,
-[data-barcode-container="true"],
-[data-barcode-container="true"] * {
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-}
-#printable-barcode-label .barcode-bar {
-  background-color: #000000 !important;
-}
-
 /* ==========================================================================
-   17. RECHARTS, ICONS & SCROLLBARS THEME INTEGRATION
+   16. RECHARTS, ICONS & SCROLLBARS TOKENS
    ========================================================================== */
 
 /* Recharts elements strictly using theme tokens */
@@ -1459,6 +1043,61 @@ svg:not([fill="none"]):not([class*="fill-"]):not([data-preserve-fill="true"]) {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* ==========================================================================
+   17. PRINT STYLES (Crisp Black on White for Thermal Labels, Receipts & Reports)
+   ========================================================================== */
+
+@media print {
+  html, body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    color-scheme: light !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-barcode-label,
+  #printable-barcode-label *,
+  [data-barcode-container="true"],
+  [data-barcode-container="true"] *,
+  [data-printable-report="true"],
+  [data-printable-report="true"] * {
+    visibility: visible;
+  }
+
+  #printable-barcode-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 360px !important;
+    margin: 0 auto;
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    border: 2px solid #000000 !important;
+    box-shadow: none !important;
+  }
+
+  #printable-barcode-label p,
+  #printable-barcode-label span,
+  #printable-barcode-label div {
+    color: #000000 !important;
+  }
+
+  .barcode-bar,
+  #printable-barcode-label .barcode-bar,
+  [data-barcode-container="true"] .barcode-bar {
+    background-color: #000000 !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 

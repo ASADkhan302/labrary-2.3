@@ -26,7 +26,6 @@ import {
   Filter
 } from 'lucide-react';
 import { Book, Transaction } from '../../types/library';
-import { useTheme } from '../../context/ThemeContext';
 
 interface CatalogChartsViewProps {
   books: Book[];
@@ -52,21 +51,20 @@ export const CatalogChartsView: React.FC<CatalogChartsViewProps> = ({
   onSelectCategory,
   onSwitchView,
 }) => {
-  const { isDark } = useTheme();
   const activeBooks = useMemo(() => books.filter(b => b.is_active), [books]);
 
   const chartTheme = useMemo(() => ({
-    tickColor: isDark ? '#94A3B8' : '#64748B',
-    gridColor: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(100, 116, 139, 0.15)',
+    tickColor: '#94A3B8',
+    gridColor: 'rgba(148, 163, 184, 0.15)',
     tooltipStyle: {
-      backgroundColor: isDark ? '#0B1220' : '#FFFFFF',
-      borderColor: isDark ? '#334155' : '#E2E8F0',
+      backgroundColor: '#0B1220',
+      borderColor: '#334155',
       borderRadius: '8px',
-      color: isDark ? '#F1F5F9' : '#0F172A',
+      color: '#F1F5F9',
       fontSize: '12px',
-      boxShadow: isDark ? '0 10px 15px -3px rgba(0, 0, 0, 0.5)' : '0 4px 6px -1px rgba(15, 23, 42, 0.1)',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
     },
-  }), [isDark]);
+  }), []);
 
   // Overall totals
   const totalTitles = activeBooks.length;
@@ -231,7 +229,7 @@ export const CatalogChartsView: React.FC<CatalogChartsViewProps> = ({
                 <YAxis tick={{ fontSize: 11, fill: chartTheme.tickColor }} />
                 <Tooltip 
                   contentStyle={chartTheme.tooltipStyle}
-                  cursor={{ fill: isDark ? 'rgba(245, 158, 11, 0.08)' : 'rgba(245, 158, 11, 0.04)' }}
+                  cursor={{ fill: 'rgba(245, 158, 11, 0.08)' }}
                 />
                 <Bar dataKey="available" name="Available Copies" fill="#10B981" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={600} animationEasing="ease-out" />
                 <Bar dataKey="issued" name="Issued Copies" fill="#F59E0B" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={600} animationEasing="ease-out" />
@@ -353,7 +351,7 @@ export const CatalogChartsView: React.FC<CatalogChartsViewProps> = ({
                 <YAxis tick={{ fontSize: 11, fill: chartTheme.tickColor }} />
                 <Tooltip 
                   contentStyle={chartTheme.tooltipStyle}
-                  cursor={{ fill: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.04)' }}
+                  cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
                 />
                 <Bar dataKey="copies" name="Physical Volumes" fill="#3B82F6" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={600} animationEasing="ease-out" />
                 <Bar dataKey="count" name="Unique Titles" fill="#8B5CF6" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={600} animationEasing="ease-out" />

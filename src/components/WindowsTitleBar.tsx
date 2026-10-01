@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Minus, Square, X, Copy, Sparkles } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
 
 interface WindowsTitleBarProps {
   onMinimize?: () => void;
@@ -18,7 +17,6 @@ export const WindowsTitleBar: React.FC<WindowsTitleBarProps> = ({
   libraryName = 'Library Management System',
   onReplayOpeningAnimation,
 }) => {
-  const { isDark } = useTheme();
   const [isMaximized, setIsMaximized] = useState(true);
   const [showNotification, setShowNotification] = useState<string | null>(null);
 
@@ -60,7 +58,7 @@ export const WindowsTitleBar: React.FC<WindowsTitleBarProps> = ({
         className="w-full flex items-center justify-between px-4 select-none z-50 shrink-0 relative transition-colors duration-150 border-b border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] h-10"
       >
         {/* Subtle accent hairline across top */}
-        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#2563EB]/40 to-transparent pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)]/40 to-transparent pointer-events-none" />
 
         {/* Left Section: Institutional edition indicator */}
         <div className="flex items-center gap-2 shrink-0">
@@ -75,7 +73,7 @@ export const WindowsTitleBar: React.FC<WindowsTitleBarProps> = ({
             <button
               onClick={onReplayOpeningAnimation}
               title="Play App Opening Intro Animation"
-              className="flex items-center gap-1.5 px-2.5 h-6 rounded-[8px] bg-blue-500/10 hover:bg-blue-500/20 active:scale-[0.98] text-[var(--text-accent)] border border-blue-500/25 text-[12px] font-mono font-medium transition-all duration-150"
+              className="flex items-center gap-1.5 px-2.5 h-6 rounded-[8px] bg-amber-500/10 hover:bg-amber-500/20 active:scale-[0.98] text-amber-700 dark:text-amber-400 border border-amber-500/25 text-[12px] font-mono font-medium transition-all duration-150 cursor-pointer"
             >
               <span>⚡ Boot Intro</span>
             </button>

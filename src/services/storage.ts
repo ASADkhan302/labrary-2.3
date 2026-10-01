@@ -483,14 +483,22 @@ export class LibraryStorage {
         localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(INITIAL_SETTINGS));
         return INITIAL_SETTINGS;
       }
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      if (parsed) {
+        delete parsed.theme;
+        delete parsed.light_theme_style;
+      }
+      return { ...INITIAL_SETTINGS, ...parsed };
     } catch {
       return INITIAL_SETTINGS;
     }
   }
 
   static saveSettings(settings: SystemSettings): void {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    const cleanSettings = { ...settings };
+    delete (cleanSettings as any).theme;
+    delete (cleanSettings as any).light_theme_style;
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(cleanSettings));
   }
 
   // --- Reset to Complete First-Time App Opening State ---
@@ -503,6 +511,8 @@ export class LibraryStorage {
       localStorage.removeItem(STORAGE_KEYS.SETTINGS);
       localStorage.removeItem(STORAGE_KEYS.LOCATION);
       localStorage.removeItem(STORAGE_KEYS.INITIALIZED);
+      localStorage.removeItem('ulm_lms_theme');
+      localStorage.removeItem('ulm_lms_light_theme_style');
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.removeItem('ulm_lms_splash_seen');
       }

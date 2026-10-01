@@ -65,8 +65,6 @@ export interface HistoryEntry {
   created_at: string;
 }
 
-export type LightThemeStyle = 'blue-gray' | 'warm-cream' | 'sage-green' | 'mist-lavender' | 'slate-gray';
-
 export interface SystemSettings {
   library_name: string;
   university_name: string;
@@ -76,8 +74,6 @@ export interface SystemSettings {
   auto_submit_scan: boolean;
   scanner_sound: boolean;
   error_sound: boolean;
-  theme: 'dark' | 'light' | 'system';
-  light_theme_style?: LightThemeStyle;
   db_path: string;
   wal_mode: boolean;
   station_id: string;

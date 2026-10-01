@@ -29,11 +29,8 @@ import { StorageLocationModal } from './components/modals/StorageLocationModal';
 import { Book, Borrower, Transaction, HistoryEntry, SystemSettings, NavigationTab, StorageLocationConfig } from './types/library';
 import { LibraryStorage } from './services/storage';
 import { playSuccessBarcodeBeep, playClickSound, playErrorBeep } from './services/audio';
-import { useTheme } from './context/ThemeContext';
 
 export default function App() {
-  const { isDark, lightThemeStyle } = useTheme();
-
   // Navigation
   const [activeTab, setActiveTab] = useState<NavigationTab>('catalog');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -195,7 +192,7 @@ export default function App() {
         clearTimeout(timer);
       };
     }
-  }, [activeTab, isDark, lightThemeStyle]);
+  }, [activeTab]);
 
   // Book CRUD actions
   const handleSaveBook = (bookData: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'is_active'>) => {
