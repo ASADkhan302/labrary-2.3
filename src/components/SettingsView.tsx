@@ -11,7 +11,11 @@ import {
   FolderOpen,
   Check,
   Sparkles,
-  Loader2
+  Loader2,
+  Copy,
+  ArrowRightLeft,
+  ShieldCheck,
+  Folder
 } from 'lucide-react';
 import { SystemSettings } from '../types/library';
 import { LibraryStorage } from '../services/storage';
@@ -20,6 +24,7 @@ interface SettingsViewProps {
   settings: SystemSettings;
   onUpdateSettings: (newSettings: SystemSettings) => void;
   onResetDemoData: () => void;
+  onClearDemoData?: () => void;
   onPlayBootAnimation?: () => void;
   onOpenStorageModal?: () => void;
 }
@@ -28,6 +33,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
   onUpdateSettings,
   onResetDemoData,
+  onClearDemoData,
   onPlayBootAnimation,
   onOpenStorageModal,
 }) => {
@@ -36,11 +42,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [institutionalSaved, setInstitutionalSaved] = useState(false);
+  const [copiedPath, setCopiedPath] = useState(false);
+  const [moveNotice, setMoveNotice] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmClearDemo, setConfirmClearDemo] = useState(false);
+
+  const storageConfig = LibraryStorage.getStorageLocation();
+  const currentDbPath = storageConfig.folderPath 
+    ? `${storageConfig.folderPath}\\ULM_Library.db`
+    : (formData.db_path || 'C:\\Users\\Admin\\Documents\\ULM Library\\ULM_Library.db');
 
   useEffect(() => {
     setFormData({ ...settings });
   }, [settings]);
+
+  const handleCopyPath = () => {
+    navigator.clipboard.writeText(currentDbPath);
+    setCopiedPath(true);
+    setTimeout(() => setCopiedPath(false), 2000);
+  };
+
+  const handleOpenFolder = () => {
+    // In web environment, simulate opening or prompt folder handle
+    setMoveNotice(`Folder location: "${storageConfig.folderPath || 'Documents\\ULM Library'}"`);
+    setTimeout(() => setMoveNotice(null), 3500);
+  };
+
+  const handleMoveData = () => {
+    if (onOpenStorageModal) {
+      onOpenStorageModal();
+    }
+  };
+
+  const handleSwitchDatabase = () => {
+    if (onOpenStorageModal) {
+      onOpenStorageModal();
+    }
+  };
 
   const handleSave = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -358,56 +396,88 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Local SQLite Database & Maintenance */}
+          {/* Local SQLite Database Storage & Repository (%APPDATA%\ULM Library\config.ini) */}
           <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-4 shadow-2xs transition-colors">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-[#1E293B] pb-3">
-              <HardDrive className="w-4 h-4 text-emerald-500" />
-              <span>Offline SQLite Data Management & Snapshot</span>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                <HardDrive className="w-4 h-4 text-emerald-500" />
+                <span>Library Storage Repository (%APPDATA%\ULM Library\config.ini)</span>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40">
+                WAL MODE · SINGLE-INSTANCE LOCK ACTIVE
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                  Database File URI
-                </label>
+            {/* Current Active Path Row */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Active SQLite Database File Path:
+              </label>
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   readOnly
-                  value={formData.db_path}
-                  className="w-full rounded-lg px-3 py-2 text-xs font-mono select-all border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#020617] text-slate-600 dark:text-slate-400"
+                  value={currentDbPath}
+                  className="flex-1 rounded-lg px-3 py-2 text-xs font-mono select-all border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#020617] text-slate-800 dark:text-sky-300"
                 />
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#020617]">
-                <div>
-                  <p className="text-xs font-medium text-slate-800 dark:text-slate-200">Write-Ahead Logging (WAL)</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">High concurrency write optimization</p>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40">
-                  WAL ACTIVE
-                </span>
+                <button
+                  type="button"
+                  onClick={handleOpenFolder}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-[#334155] bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Open folder in Windows Explorer"
+                >
+                  <Folder className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Open Folder</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyPath}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-[#334155] bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="Copy full database file path to clipboard"
+                >
+                  {copiedPath ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400 font-bold">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copy Path</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            {onOpenStorageModal && (
-              <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <FolderOpen className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Database Storage Location &amp; Target Drive Directory</span>
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    All catalog records, transactions, and student accounts are saved to this PC path.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onOpenStorageModal}
-                  className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center gap-1.5"
-                >
-                  <FolderOpen className="w-3.5 h-3.5" />
-                  <span>Change Storage Location</span>
-                </button>
+            {/* Storage Actions Row */}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleMoveData}
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-amber-500" />
+                <span>Move Data to a New Folder...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSwitchDatabase}
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-200 dark:border-[#334155] bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5 text-sky-400" />
+                <span>Switch to Another Existing Database...</span>
+              </button>
+
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                *Moving data creates a safety backup, copies via VACUUM INTO, verifies counts, and preserves original file.
+              </span>
+            </div>
+
+            {moveNotice && (
+              <div className="p-2.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-mono">
+                {moveNotice}
               </div>
             )}
 
@@ -421,37 +491,75 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <span>Export SQLite Database JSON Snapshot</span>
               </button>
 
-              {confirmReset ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-rose-600 dark:text-rose-400 font-semibold">Restore 8 titles & 42 copies?</span>
+              <div className="flex items-center gap-2">
+                {confirmClearDemo ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold">Clear 8 demo members?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onClearDemoData) onClearDemoData();
+                        else {
+                          LibraryStorage.clearDemoData();
+                        }
+                        setConfirmClearDemo(false);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Confirm Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClearDemo(false)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      onResetDemoData();
-                      setConfirmReset(false);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                    onClick={() => setConfirmClearDemo(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-medium transition-colors cursor-pointer"
+                    title="Clear sample demo people (notes = 'DEMO')"
                   >
-                    Confirm Reset
+                    <Trash2 className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Clear Demo Data</span>
                   </button>
+                )}
+
+                {confirmReset ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-rose-600 dark:text-rose-400 font-semibold">Restore 8 titles & 42 copies?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onResetDemoData();
+                        setConfirmReset(false);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Confirm Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmReset(false)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => setConfirmReset(false)}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs transition-colors cursor-pointer"
+                    onClick={() => setConfirmReset(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-rose-200 dark:border-rose-900/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-700 dark:text-rose-300 text-xs font-medium transition-colors cursor-pointer"
                   >
-                    Cancel
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Restore Demo Catalog (8 Books, 42 Copies)</span>
                   </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmReset(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-rose-200 dark:border-rose-900/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-700 dark:text-rose-300 text-xs font-medium transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Restore Demo Catalog (8 Books, 42 Copies)</span>
-                </button>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </form>

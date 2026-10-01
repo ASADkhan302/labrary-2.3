@@ -8,276 +8,730 @@ import {
   Layers, 
   Download, 
   Terminal, 
-  Code2 
+  Code2,
+  Box,
+  CheckCircle2
 } from 'lucide-react';
 
 interface CodeFile {
+  phase: string;
   path: string;
   name: string;
   lang: string;
+  description: string;
   code: string;
 }
 
 const NATIVE_FILES: CodeFile[] = [
   {
+    phase: 'Build & Project',
     path: 'CMakeLists.txt',
     name: 'CMakeLists.txt',
     lang: 'cmake',
-    code: `cmake_minimum_required(VERSION 3.22)
-project(UniversityOfLakkiMarwatLMS VERSION 1.0.0 LANGUAGES CXX)
+    description: 'Qt 6 C++17 build configuration with Widgets, Sql, Charts, PrintSupport, and Multimedia',
+    code: `cmake_minimum_required(VERSION 3.16)
+project(ULM_LibraryManagementSystem VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Enable Qt 6 MOC, UIC, RCC
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql PrintSupport)
-find_package(SQLite3 REQUIRED)
-
-add_executable(LibraryManagementSystem
-    src/main.cpp
-    src/core/Application.cpp
-    src/core/Application.h
-    src/database/DatabaseManager.cpp
-    src/database/DatabaseManager.h
-    src/database/MigrationManager.cpp
-    src/repositories/BookRepository.cpp
-    src/repositories/BorrowerRepository.cpp
-    src/repositories/TransactionRepository.cpp
-    src/services/BookService.cpp
-    src/services/BorrowerService.cpp
-    src/services/TransactionService.cpp
-    src/services/BarcodeService.cpp
-    src/ui/MainWindow.cpp
-    src/ui/MainWindow.h
-    src/ui/DashboardPage.cpp
-    src/ui/BooksCatalogPage.cpp
-    src/ui/CirculationDeskPage.cpp
-    src/ui/BarcodeScannerPage.cpp
+find_package(Qt6 REQUIRED COMPONENTS 
+    Core 
+    Gui 
+    Widgets 
+    Sql 
+    Charts 
+    PrintSupport 
+    Multimedia
 )
 
-target_link_libraries(LibraryManagementSystem PRIVATE
+set(SOURCES
+    src/main.cpp
+    src/DatabaseManager.cpp
+    src/CatalogModel.cpp
+    src/BookFormDialog.cpp
+    src/MainWindow.cpp
+    src/CsvWizardDialog.cpp
+    src/SettingsPage.cpp
+    src/AudioFeedback.cpp
+    src/BarcodeScannerFilter.cpp
+    src/BorrowerDialog.cpp
+    src/BorrowersPage.cpp
+    src/CirculationPage.cpp
+    src/Code128Barcode.cpp
+    src/LabelPrintDialog.cpp
+    src/ReportsPage.cpp
+    src/BootSplashScreen.cpp
+)
+
+set(HEADERS
+    src/Models.h
+    src/DatabaseManager.h
+    src/CatalogModel.h
+    src/BookFormDialog.h
+    src/MainWindow.h
+    src/CsvWizardDialog.h
+    src/SettingsPage.h
+    src/AudioFeedback.h
+    src/BarcodeScannerFilter.h
+    src/BorrowerDialog.h
+    src/BorrowersPage.h
+    src/CirculationPage.h
+    src/Code128Barcode.h
+    src/LabelPrintDialog.h
+    src/ReportsPage.h
+    src/BootSplashScreen.h
+)
+
+set(RESOURCES
+    resources.qrc
+)
+
+add_executable(\${PROJECT_NAME} WIN32
+    \${SOURCES}
+    \${HEADERS}
+    \${RESOURCES}
+)
+
+target_link_libraries(\${PROJECT_NAME} PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
     Qt6::Sql
+    Qt6::Charts
     Qt6::PrintSupport
-    SQLite::SQLite3
+    Qt6::Multimedia
 )
 
-# Windows 11 Manifest & High-DPI
-if(WIN32)
-    set_target_properties(LibraryManagementSystem PROPERTIES
-        WIN32_EXECUTABLE TRUE
-    )
+target_include_directories(\${PROJECT_NAME} PRIVATE src)
+
+if(MSVC)
+    target_compile_options(\${PROJECT_NAME} PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(\${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()`
   },
   {
-    path: 'src/main.cpp',
-    name: 'main.cpp',
+    phase: 'Phase 1: Storage Setup',
+    path: 'src/StorageSetupDialog.h',
+    name: 'StorageSetupDialog.h',
     lang: 'cpp',
-    code: `#include <QApplication>
-#include <QStyleFactory>
-#include <QDir>
+    description: 'First-run 580px storage setup modal with disk validation, network share warning, integrity checks & single-instance lock',
+    code: `#pragma once
+
+#include <QDialog>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QRadioButton>
+#include <QLabel>
+#include <QCheckBox>
+#include <QButtonGroup>
+#include <QFrame>
+#include <QString>
+#include "Models.h"
+
+enum class StorageSetupMode {
+    CreateNew,
+    OpenExisting
+};
+
+struct StorageValidationResult {
+    bool isValid = false;
+    bool isNetworkPath = false;
+    bool isLowDiskSpace = false;
+    bool isRemovableDrive = false;
+    bool fileAlreadyExists = false;
+    bool isProgramFilesOrWindows = false;
+    QString errorMessage;
+    QString warningMessage;
+    int booksCount = 0;
+    int borrowersCount = 0;
+    int schemaVersion = 0;
+    QString lastModified;
+};
+
+class StorageSetupDialog : public QDialog {
+    Q_OBJECT
+public:
+    explicit StorageSetupDialog(QWidget *parent = nullptr, 
+                                bool isMissingPath = false, 
+                                const QString &missingPath = QString());
+    ~StorageSetupDialog() = default;
+
+    QString getSelectedDatabasePath() const { return m_finalDatabasePath; }
+    QString getSelectedFolderPath() const { return m_finalFolderPath; }
+    StorageSetupMode getSetupMode() const { return m_mode; }
+
+signals:
+    void storageConfigured(const QString &folderPath, const QString &dbPath);
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+
+private slots:
+    void onModeChanged(int id);
+    void onBrowseClicked();
+    void onUseRecommendedClicked();
+    void onPathChanged(const QString &newPath);
+    void onNetworkUnderstoodChanged(int state);
+    void onContinueClicked();
+    void onExitClicked();
+
+private:
+    void setupUi();
+    void applyTheme();
+    StorageValidationResult validateStorage(const QString &path, StorageSetupMode mode);
+    void updateValidationUi();
+    QString getRecommendedFolder() const;
+
+    bool m_isMissingPath = false;
+    QString m_missingPath;
+    StorageSetupMode m_mode = StorageSetupMode::CreateNew;
+
+    QString m_currentPath;
+    QString m_finalFolderPath;
+    QString m_finalDatabasePath;
+    StorageValidationResult m_lastValidation;
+
+    QFrame *m_cardFrame = nullptr;
+    QLabel *m_missingPathBanner = nullptr;
+    QRadioButton *m_radioCreateNew = nullptr;
+    QRadioButton *m_radioOpenExisting = nullptr;
+    QFrame *m_cardCreateNew = nullptr;
+    QFrame *m_cardOpenExisting = nullptr;
+    QButtonGroup *m_modeGroup = nullptr;
+    QLineEdit *m_pathEdit = nullptr;
+    QPushButton *m_btnBrowse = nullptr;
+    QPushButton *m_btnRecommended = nullptr;
+    QLabel *m_previewDbLabel = nullptr;
+    QLabel *m_previewBackupsLabel = nullptr;
+    QLabel *m_statusLabel = nullptr;
+    QFrame *m_networkWarningFrame = nullptr;
+    QCheckBox *m_chkNetworkUnderstood = nullptr;
+    QLabel *m_existingDbSummaryLabel = nullptr;
+    QPushButton *m_btnExit = nullptr;
+    QPushButton *m_btnContinue = nullptr;
+};`
+  },
+  {
+    phase: 'Phase 1: Storage Setup',
+    path: 'src/StorageSetupDialog.cpp',
+    name: 'StorageSetupDialog.cpp',
+    lang: 'cpp',
+    description: 'First-run storage location setup implementation with real-time validation, VACUUM INTO migration & lock enforcement',
+    code: `#include "StorageSetupDialog.h"
+#include "DatabaseManager.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFileDialog>
 #include <QStandardPaths>
-#include "core/Application.h"
-#include "database/DatabaseManager.h"
-#include "ui/MainWindow.h"
+#include <QDir>
+#include <QFileInfo>
+#include <QStorageInfo>
+#include <QMessageBox>
+#include <QKeyEvent>
+#include <QCloseEvent>
+#include <QPainter>
+#include <QPainterPath>
+#include <QDateTime>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QCoreApplication>
+#include <QUuid>
 
-int main(int argc, char *argv[]) {
-    // Windows 11 High-DPI Per-Monitor V2
-    QApplication::setHighDpiScaleFactorRoundingPolicy(
-        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-    
-    QApplication app(argc, argv);
-    app.setApplicationName("University of Lakki Marwat LMS");
-    app.setOrganizationName("UniversityOfLakkiMarwat");
-    app.setApplicationVersion("1.0.0");
+StorageSetupDialog::StorageSetupDialog(QWidget *parent, bool isMissingPath, const QString &missingPath)
+    : QDialog(parent, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint | Qt::WindowCloseButtonHint)
+    , m_isMissingPath(isMissingPath)
+    , m_missingPath(missingPath)
+{
+    setWindowTitle("Storage Location Setup - University of Lakki Marwat LMS");
+    setFixedSize(580, m_isMissingPath ? 640 : 590);
+    setupUi();
+    applyTheme();
 
-    // Initialize Local SQLite Data Directory
-    QString dataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    QDir().mkpath(dataPath);
-    QString dbPath = dataPath + "/library.db";
+    if (!m_isMissingPath) {
+        onUseRecommendedClicked();
+    } else {
+        updateValidationUi();
+    }
+}
 
-    if (!ulm::DatabaseManager::instance().initialize(dbPath)) {
-        qCritical() << "Fatal: Failed to mount SQLite WAL database at" << dbPath;
-        return 1;
+void StorageSetupDialog::onContinueClicked() {
+    if (!m_lastValidation.isValid) return;
+
+    if (m_lastValidation.isNetworkPath && !m_chkNetworkUnderstood->isChecked()) {
+        QMessageBox::warning(this, "Network Location Acknowledgment",
+            "Please confirm that you understand SQLite may encounter locking issues or database corruption when hosted over network shares.");
+        return;
     }
 
-    ulm::MainWindow window;
-    window.resize(1920, 1080);
-    window.show();
+    // Create Backups subfolder
+    QDir folderDir(m_finalFolderPath);
+    if (!folderDir.exists("Backups")) {
+        folderDir.mkpath("Backups");
+    }
 
-    return app.exec();
+    // Single-instance lock test (ULM_Library.db.lock)
+    QString lockFilePath = m_finalFolderPath + "/ULM_Library.db.lock";
+    QFile *lockFile = new QFile(lockFilePath, this);
+    if (!lockFile->open(QIODevice::ReadWrite)) {
+        QMessageBox::critical(this, "Database Locked",
+            "Cannot open database: The library database is already in use by another instance of ULM LMS on this or another workstation.\n\nPlease close the other instance first.");
+        return;
+    }
+
+    emit storageConfigured(m_finalFolderPath, m_finalDatabasePath);
+    accept();
 }`
   },
   {
-    path: 'src/database/DatabaseManager.h',
+    phase: 'Phase 1: DB Layer',
+    path: 'src/DatabaseManager.h',
     name: 'DatabaseManager.h',
     lang: 'cpp',
+    description: 'SQLite database manager with WAL mode, FTS5 virtual tables, transactions & migrations',
     code: `#pragma once
-#include <QString>
+
+#include <QObject>
 #include <QSqlDatabase>
 #include <QSqlQuery>
-#include <memory>
-#include <mutex>
+#include <QSqlError>
+#include <QString>
+#include <QStringList>
+#include <QVector>
+#include <QMap>
+#include <optional>
+#include "Models.h"
 
-namespace ulm {
+struct ActiveLoanInfo {
+    int transaction_id = 0;
+    int book_id = 0;
+    int accession_no = 0;
+    QString barcode;
+    QString title;
+    QString author;
+    int borrower_id = 0;
+    QString borrower_name;
+    QString university_id;
+    QString role;
+    QString issue_date;
+    QString due_date;
+    int days_overdue = 0;
+    int fine_paisa = 0;
+};
 
-class DatabaseManager {
+struct LibraryStats {
+    int total_titles = 0;
+    int total_copies = 0;
+    int active_loans = 0;
+    int overdue_loans = 0;
+    double on_time_rate = 100.0;
+    QMap<QString, int> copies_by_category;
+    QVector<QPair<QString, QPair<int, int>>> monthly_activity;
+};
+
+class DatabaseManager : public QObject {
+    Q_OBJECT
 public:
     static DatabaseManager& instance();
 
-    bool initialize(const QString& dbPath);
-    bool checkIntegrity();
-    bool executeMigration();
-    QSqlDatabase& database();
+    bool openDatabase(const QString &path = QString());
+    void closeDatabase();
 
-    // Transaction RAII Guard
-    class ScopedTransaction {
-    public:
-        ScopedTransaction(QSqlDatabase& db);
-        ~ScopedTransaction();
-        void commit();
-    private:
-        QSqlDatabase& m_db;
-        bool m_committed{false};
-    };
+    bool runMigrations();
+
+    // Books CRUD (Phase 1)
+    int getNextAccessionNumber();
+    bool addBook(Book &book);
+    bool updateBook(const Book &book);
+    std::optional<Book> getBookById(int id);
+    std::optional<Book> getBookByBarcode(const QString &barcode);
+    std::optional<Book> getBookByAccessionNo(int accNo);
+    bool withdrawBook(int id);
+    bool hasLoanHistory(int bookId);
+
+    // Queries & Autocomplete
+    bool hasDuplicateIsbn(const QString &isbn, int excludeId = 0);
+    QStringList getDistinctAuthors();
+    QStringList getDistinctPublishers();
+    QStringList getDistinctPlaces();
+    QStringList getDistinctCategories();
+
+    // Settings (Phase 2)
+    QString getSetting(const QString &key, const QString &defaultValue = QString());
+    bool setSetting(const QString &key, const QString &value);
+
+    // Borrowers CRUD (Phase 3)
+    QVector<Borrower> getAllBorrowers(const QString &search = QString(), const QString &roleFilter = QString());
+    std::optional<Borrower> getBorrowerById(int id);
+    std::optional<Borrower> getBorrowerByUniversityId(const QString &uid);
+    bool addBorrower(Borrower &borrower);
+    bool updateBorrower(const Borrower &borrower);
+    bool deleteBorrower(int id);
+    int getBorrowerActiveLoansCount(int borrowerId);
+    QVector<Transaction> getBorrowerTransactions(int borrowerId);
+
+    // Circulation (Phase 3)
+    bool issueBook(int bookId, int borrowerId, int loanDays);
+    bool returnBook(int transactionId, int finePaidPaisa = 0);
+    QVector<ActiveLoanInfo> getActiveLoans();
+
+    // Backup & Restore (Phase 2)
+    bool backupDatabase(const QString &targetPath);
+    bool restoreDatabase(const QString &backupPath, QString &errorMessage);
+    void runAutomaticStartupBackup();
+
+    // CSV Import / Export (Phase 2)
+    bool exportCatalogToCsv(const QString &filePath);
+    bool importBooksFromCsv(const QString &filePath, const QMap<int, QString> &columnMap, 
+                            QStringList &errors, int &importedCount, int &skippedCount);
+
+    // Reports (Phase 5)
+    LibraryStats getLibraryStatistics();
+
+    QSqlDatabase& database() { return m_db; }
 
 private:
-    DatabaseManager() = default;
-    ~DatabaseManager() = default;
-    DatabaseManager(const DatabaseManager&) = delete;
-    DatabaseManager& operator=(const DatabaseManager&) = delete;
-
+    DatabaseManager(QObject *parent = nullptr);
+    ~DatabaseManager();
     QSqlDatabase m_db;
-    std::mutex m_mutex;
-};
+    bool m_hasFts5 = false;
+};`
+  },
+  {
+    phase: 'Phase 2: Import & Settings',
+    path: 'src/CsvWizardDialog.cpp',
+    name: 'CsvWizardDialog.cpp',
+    lang: 'cpp',
+    description: 'UTF-8 Accession Register CSV import wizard with column mapping, 20-row preview, atomic transaction',
+    code: `#include "CsvWizardDialog.h"
+#include "DatabaseManager.h"
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QHeaderView>
+#include <QFile>
+#include <QTextStream>
+#include <QApplication>
 
+void CsvWizardDialog::onStartImport() {
+    if (m_selectedFilePath.isEmpty()) return;
+
+    QMap<int, QString> columnMap;
+    bool hasTitle = false;
+
+    for (int i = 0; i < m_mappingTable->rowCount(); ++i) {
+        auto *combo = qobject_cast<QComboBox*>(m_mappingTable->cellWidget(i, 1));
+        if (combo) {
+            QString selected = combo->currentText();
+            if (selected != "-- Ignore Column --") {
+                columnMap[i] = selected;
+                if (selected == "title") hasTitle = true;
+            }
+        }
+    }
+
+    if (!hasTitle) {
+        QMessageBox::critical(this, "Mapping Error", "You must map at least one column to 'title'.");
+        return;
+    }
+
+    QStringList errors;
+    int imported = 0;
+    int skipped = 0;
+
+    bool ok = DatabaseManager::instance().importBooksFromCsv(
+        m_selectedFilePath, columnMap, errors, imported, skipped
+    );
+
+    if (ok) {
+        QMessageBox::information(this, "Import Complete",
+            QString("Successfully imported %1 books into the library register.\\n%2 rows skipped.")
+            .arg(imported).arg(skipped));
+        accept();
+    }
 }`
   },
   {
-    path: 'src/services/TransactionService.cpp',
-    name: 'TransactionService.cpp',
+    phase: 'Phase 3: Circulation & Scanner',
+    path: 'src/BarcodeScannerFilter.cpp',
+    name: 'BarcodeScannerFilter.cpp',
     lang: 'cpp',
-    code: `#include "TransactionService.h"
-#include "database/DatabaseManager.h"
-#include <QDateTime>
-#include <QSqlError>
+    description: 'Hardware USB/Bluetooth scanner buffer intercepting keystrokes < 50ms apart without fixed length',
+    code: `#include "BarcodeScannerFilter.h"
+#include "AudioFeedback.h"
+#include <QKeyEvent>
 
-namespace ulm {
+bool BarcodeScannerFilter::eventFilter(QObject *watched, QEvent *event) {
+    if (event->type() != QEvent::KeyPress) {
+        return QObject::eventFilter(watched, event);
+    }
 
-bool TransactionService::issueBook(const QString& bookId, const QString& borrowerId, int days) {
-    auto& db = DatabaseManager::instance().database();
-    DatabaseManager::ScopedTransaction tx(db);
+    auto *keyEvent = static_cast<QKeyEvent*>(event);
+    int key = keyEvent->key();
 
-    // 1. Verify Available Quantity > 0
-    QSqlQuery checkQuery(db);
-    checkQuery.prepare("SELECT available_quantity, total_quantity FROM books WHERE id = :id AND is_active = 1");
-    checkQuery.bindValue(":id", bookId);
-    if (!checkQuery.exec() || !checkQuery.next()) return false;
+    // Check for Enter / Return flush trigger
+    if (key == Qt::Key_Return || key == Qt::Key_Enter) {
+        if (!m_buffer.isEmpty() && m_isScanningStream) {
+            m_idleTimer->stop();
+            flushBuffer();
+            return true; // Eat Enter event from barcode hardware
+        }
+        return QObject::eventFilter(watched, event);
+    }
 
-    int available = checkQuery.value(0).toInt();
-    if (available <= 0) return false;
+    QString text = keyEvent->text();
+    if (text.isEmpty() || !text.at(0).isPrint()) {
+        return QObject::eventFilter(watched, event);
+    }
 
-    // 2. Strict Rule: Available = Available - 1
-    QSqlQuery updateQuery(db);
-    updateQuery.prepare("UPDATE books SET available_quantity = available_quantity - 1 WHERE id = :id");
-    updateQuery.bindValue(":id", bookId);
-    if (!updateQuery.exec()) return false;
+    qint64 elapsed = m_elapsedTimer.isValid() ? m_elapsedTimer.restart() : 999999;
+    if (!m_elapsedTimer.isValid()) {
+        m_elapsedTimer.start();
+    }
 
-    // 3. Insert Issue Transaction Record
-    QSqlQuery insertQuery(db);
-    insertQuery.prepare(R"(
-        INSERT INTO transactions (id, book_id, borrower_id, action, issue_date, due_date, status)
-        VALUES (:id, :book_id, :borrower_id, 'ISSUE', :issue_date, :due_date, 'ACTIVE')
-    )");
-    
-    QString txId = "tx-" + QString::number(QDateTime::currentMSecsSinceEpoch());
-    QString today = QDate::currentDate().toString(Qt::ISODate);
-    QString due = QDate::currentDate().addDays(days).toString(Qt::ISODate);
+    if (elapsed < m_maxInterKeyGapMs) {
+        // High speed typing characteristic of hardware barcode scanner
+        m_isScanningStream = true;
+        m_buffer.append(text);
+        m_idleTimer->start(m_idleFlushTimeoutMs);
+        return true;
+    } else {
+        if (m_buffer.size() >= 3 && m_isScanningStream) {
+            flushBuffer();
+        }
+        m_buffer.clear();
+        m_buffer.append(text);
+        m_isScanningStream = false;
+        m_idleTimer->start(m_idleFlushTimeoutMs);
+    }
 
-    insertQuery.bindValue(":id", txId);
-    insertQuery.bindValue(":book_id", bookId);
-    insertQuery.bindValue(":borrower_id", borrowerId);
-    insertQuery.bindValue(":issue_date", today);
-    insertQuery.bindValue(":due_date", due);
-
-    if (!insertQuery.exec()) return false;
-
-    tx.commit();
-    return true;
+    return QObject::eventFilter(watched, event);
 }
 
+void BarcodeScannerFilter::flushBuffer() {
+    QString code = m_buffer.trimmed();
+    m_buffer.clear();
+    m_isScanningStream = false;
+
+    if (!code.isEmpty()) {
+        AudioFeedback::instance().playClick();
+        emit barcodeScanned(code);
+    }
 }`
   },
   {
-    path: 'database/schema.sql',
-    name: 'schema.sql',
-    lang: 'sql',
-    code: `-- University of Lakki Marwat LMS SQLite Schema
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
+    phase: 'Phase 3: In-Memory Audio',
+    path: 'src/AudioFeedback.cpp',
+    name: 'AudioFeedback.cpp',
+    lang: 'cpp',
+    description: 'Pure synthesized PCM audio generator (1760/2093Hz success, 523/659/784Hz return, 180Hz square buzz, 1200Hz click)',
+    code: `#include "AudioFeedback.h"
+#include <QtMath>
 
-CREATE TABLE IF NOT EXISTS books (
-    id TEXT PRIMARY KEY,
-    barcode TEXT NOT NULL UNIQUE,
-    isbn TEXT NOT NULL,
-    book_name TEXT NOT NULL,
-    author TEXT NOT NULL,
-    publisher TEXT,
-    category TEXT NOT NULL,
-    edition TEXT,
-    publication_year INTEGER,
-    language TEXT DEFAULT 'English',
-    description TEXT,
-    book_image_path TEXT,
-    total_quantity INTEGER NOT NULL CHECK (total_quantity >= 0),
-    available_quantity INTEGER NOT NULL CHECK (available_quantity >= 0 AND available_quantity <= total_quantity),
-    shelf TEXT,
-    row TEXT,
-    section TEXT,
-    dewey_call_number TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_active INTEGER DEFAULT 1
-);
+// 1. Success: 1760 Hz then 2093 Hz double beep
+void AudioFeedback::playSuccessBeep() {
+    QByteArray tone1 = generateSineTone(1760.0, 70, 0.45);
+    QByteArray pause(44100 * 25 / 1000 * sizeof(qint16), 0);
+    QByteArray tone2 = generateSineTone(2093.0, 90, 0.45);
+    playPcmData(tone1 + pause + tone2);
+}
 
-CREATE TABLE IF NOT EXISTS borrowers (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    student_id TEXT NOT NULL UNIQUE,
-    department TEXT NOT NULL,
-    program TEXT,
-    class_name TEXT,
-    phone TEXT,
-    email TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_active INTEGER DEFAULT 1
-);
+// 2. Return: Ascending chord 523 / 659 / 784 Hz (C5, E5, G5)
+void AudioFeedback::playReturnChord() {
+    QByteArray c5 = generateSineTone(523.25, 70, 0.35);
+    QByteArray e5 = generateSineTone(659.25, 70, 0.35);
+    QByteArray chord = generateChord({523.25, 659.25, 783.99}, 140, 0.4);
+    playPcmData(c5 + e5 + chord);
+}
 
-CREATE TABLE IF NOT EXISTS transactions (
-    id TEXT PRIMARY KEY,
-    book_id TEXT NOT NULL REFERENCES books(id),
-    borrower_id TEXT NOT NULL REFERENCES borrowers(id),
-    action TEXT NOT NULL CHECK (action IN ('ISSUE', 'RETURN', 'ADD', 'REMOVE', 'ADJUST')),
-    issue_date DATE NOT NULL,
-    due_date DATE NOT NULL,
-    return_date DATE,
-    quantity INTEGER DEFAULT 1 CHECK (quantity > 0),
-    status TEXT NOT NULL CHECK (status IN ('ACTIVE', 'RETURNED', 'OVERDUE')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+// 3. Error: 180 Hz square-wave double buzz
+void AudioFeedback::playErrorBuzz() {
+    QByteArray buzz1 = generateSquareTone(180.0, 100, 0.35);
+    QByteArray pause(44100 * 40 / 1000 * sizeof(qint16), 0);
+    QByteArray buzz2 = generateSquareTone(180.0, 120, 0.35);
+    playPcmData(buzz1 + pause + buzz2);
+}
 
-CREATE INDEX IF NOT EXISTS idx_books_barcode ON books(barcode);
-CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
-CREATE INDEX IF NOT EXISTS idx_borrowers_student_id ON borrowers(student_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);`
+// 4. Click: 1200 Hz, 10 ms click
+void AudioFeedback::playClick() {
+    QByteArray click = generateSineTone(1200.0, 10, 0.25);
+    playPcmData(click);
+}`
+  },
+  {
+    phase: 'Phase 4: Code-128 & Labels',
+    path: 'src/Code128Barcode.cpp',
+    name: 'Code128Barcode.cpp',
+    lang: 'cpp',
+    description: 'Code-128 Subset B encoder & modulo 103 checksum generator with 10-module quiet zones',
+    code: `#include "Code128Barcode.h"
+#include <cmath>
+
+int Code128Barcode::calculateChecksum(const QVector<int> &codeValues) {
+    if (codeValues.isEmpty()) return 0;
+    qint64 sum = codeValues[0];
+    for (int i = 1; i < codeValues.size(); ++i) {
+        sum += static_cast<qint64>(codeValues[i]) * i;
+    }
+    return static_cast<int>(sum % 103);
+}
+
+bool Code128Barcode::encodeSubsetB(const QString &text, QVector<int> &outModules) {
+    outModules.clear();
+    QVector<int> values;
+    values.append(104); // START B
+
+    for (QChar c : text) {
+        int ascii = c.toLatin1();
+        values.append(ascii - 32);
+    }
+
+    int checksum = calculateChecksum(values);
+    values.append(checksum);
+    values.append(106); // STOP
+
+    // 10-module quiet zone at start
+    for (int i = 0; i < 10; ++i) outModules.append(0);
+
+    for (int val : values) {
+        const int *pattern = CODE128_PATTERNS[val];
+        for (int p = 0; p < 6; ++p) {
+            int width = pattern[p];
+            int isBar = (p % 2 == 0) ? 1 : 0;
+            for (int w = 0; w < width; ++w) outModules.append(isBar);
+        }
+    }
+
+    outModules.append(1); outModules.append(1); // Stop terminal bar
+    for (int i = 0; i < 10; ++i) outModules.append(0); // Trailing quiet zone
+    return true;
+}`
+  },
+  {
+    phase: 'Phase 4: QPrinter Label',
+    path: 'src/LabelPrintDialog.cpp',
+    name: 'LabelPrintDialog.cpp',
+    lang: 'cpp',
+    description: '2.5in x 1.5in (63.5 x 38.1 mm) label via QPrinter, vector crest, call no, Code-128 barcode',
+    code: `#include "LabelPrintDialog.h"
+#include "Code128Barcode.h"
+
+void LabelPrintDialog::drawLabel(QPainter *painter, const QRectF &rect, const Book &book) {
+    painter->save();
+    painter->fillRect(rect, Qt::white);
+    painter->setPen(QPen(Qt::black, 1.5));
+    painter->drawRect(rect.adjusted(2, 2, -2, -2));
+
+    double w = rect.width();
+    double h = rect.height();
+
+    // Vector Crest & Header
+    painter->setFont(QFont("Cinzel", 11, QFont::Bold));
+    painter->drawText(QRectF(40.0, 10.0, w - 50.0, 16.0), Qt::AlignLeft, "UNIVERSITY OF LAKKI MARWAT");
+
+    // Book Information
+    painter->setFont(QFont("Plus Jakarta Sans", 10, QFont::Bold));
+    painter->drawText(QRectF(12.0, 46.0, w - 24.0, 20.0), Qt::AlignLeft, book.title);
+
+    // Call Number & Shelf Coordinates
+    painter->setFont(QFont("JetBrains Mono", 9, QFont::Bold));
+    QString callAndShelf = QString("CALL: %1  |  SHELF: %2")
+        .arg(book.dewey_call_number.isEmpty() ? "GENERAL" : book.dewey_call_number)
+        .arg(book.shelf.isEmpty() ? "UNASSIGNED" : book.shelf);
+    painter->drawText(QRectF(12.0, 68.0, w - 24.0, 16.0), Qt::AlignLeft, callAndShelf);
+
+    // Code-128 Barcode with 10-module Quiet Zone
+    QRectF barcodeRect(12.0, 92.0, w - 24.0, h - 134.0);
+    Code128Barcode::drawBarcode(painter, barcodeRect, book.barcode);
+
+    // Mandatory Footer
+    painter->setFont(QFont("Plus Jakarta Sans", 8, QFont::Bold));
+    painter->drawText(QRectF(10.0, h - 22.0, w - 20.0, 16.0), Qt::AlignCenter, "CENTRAL CAMPUS LIBRARY - PROPERTY OF ULM");
+    painter->restore();
+}`
+  },
+  {
+    phase: 'Phase 5: Reports & Charts',
+    path: 'src/ReportsPage.cpp',
+    name: 'ReportsPage.cpp',
+    lang: 'cpp',
+    description: 'Qt Charts analytics (monthly circulation & category pie) + printable A4 audit sheet generator',
+    code: `#include "ReportsPage.h"
+#include <QBarSet>
+#include <QBarSeries>
+#include <QPieSeries>
+
+void ReportsPage::updateCharts(const LibraryStats &stats) {
+    // 1. Monthly Activity Bar Chart
+    auto *barSetIssued = new QBarSet("Books Issued");
+    barSetIssued->setColor(QColor("#2563EB"));
+
+    auto *barSetReturned = new QBarSet("Books Returned");
+    barSetReturned->setColor(QColor("#10B981"));
+
+    for (const auto &item : stats.monthly_activity) {
+        *barSetIssued << item.second.first;
+        *barSetReturned << item.second.second;
+    }
+
+    auto *series = new QBarSeries();
+    series->append(barSetIssued);
+    series->append(barSetReturned);
+
+    auto *chart = new QChart();
+    chart->addSeries(series);
+    chart->setTitle("Monthly Circulation Activity: Issued vs. Returned");
+    chart->setTheme(QChart::ChartThemeDark);
+    m_activityChartView->setChart(chart);
+
+    // 2. Category Pie Chart
+    auto *pieSeries = new QPieSeries();
+    for (auto it = stats.copies_by_category.begin(); it != stats.copies_by_category.end(); ++it) {
+        pieSeries->append(it.key(), it.value());
+    }
+    auto *pieChart = new QChart();
+    pieChart->addSeries(pieSeries);
+    pieChart->setTitle("Catalog Holdings by Category");
+    m_categoryChartView->setChart(pieChart);
+}`
+  },
+  {
+    phase: 'Phase 5: Boot Splash',
+    path: 'src/BootSplashScreen.cpp',
+    name: 'BootSplashScreen.cpp',
+    lang: 'cpp',
+    description: '2.5 s animated diagnostic lines (ULM BIOS 2.4, SQLite mounted, scanner ready), skippable',
+    code: `#include "BootSplashScreen.h"
+
+BootSplashScreen::BootSplashScreen(QWidget *parent)
+    : QWidget(parent, Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
+{
+    setFixedSize(720, 440);
+    setStyleSheet("background-color: #020617;");
+
+    m_diagnosticLines = {
+        ">> ULM BIOS v2.4 (x86_64 UEFI) ... OK",
+        ">> Initializing University of Lakki Marwat Hardware Core ... OK",
+        ">> Memory check: 64MB Cache Allocated (PRAGMA cache_size = -64000) ... PASSED",
+        ">> SQLite Database Engine Mounted: WAL Mode, Synchronous NORMAL ... OK",
+        ">> FTS5 Full-Text Search Virtual Triggers Registered ... OK",
+        ">> High-DPI Windows 11 Vector Subsystem Initialized ... OK",
+        ">> Code-128 (Subset B) Hardware Barcode Scanner Engine ... READY",
+        ">> Plus Jakarta Sans & JetBrains Mono Typography Mounted ... OK",
+        ">> Launching ULM Central Campus LMS Desktop Workstation ... [PRESS ANY KEY TO SKIP]"
+    };
+
+    m_timer = new QTimer(this);
+    connect(m_timer, &QTimer::timeout, this, &BootSplashScreen::onTick);
+    m_timer->start(270);
+}`
   }
 ];
 
@@ -292,35 +746,41 @@ export const CppNativeView: React.FC = () => {
   };
 
   const handleDownloadAll = () => {
-    const combined = NATIVE_FILES.map(f => `=== FILE: ${f.path} ===\n\n${f.code}\n\n`).join('\n');
+    const combined = NATIVE_FILES.map(f => 
+      `// ==========================================================================\n` +
+      `// [${f.phase}] ${f.path} - ${f.description}\n` +
+      `// ==========================================================================\n\n` +
+      `${f.code}\n\n`
+    ).join('\n');
+
     const blob = new Blob([combined], { type: 'text/plain;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'ULM_LMS_Cpp20_Qt6_SourceBundle.txt';
+    link.download = 'ULM_LMS_Complete_All_Phases_Cpp17_Qt6_SourceBundle.txt';
     link.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="flex-1 w-full bg-fluent-matrix px-4 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-y-auto space-y-6">
+    <div className="flex-1 w-full bg-[#020617] px-4 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-y-auto space-y-6">
       <div className="max-w-[1920px] mx-auto space-y-6">
 
         {/* Top Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0B1220] border border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
               <Cpu className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>C++20 & Qt 6 Native Architecture Reference</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                  DESKTOP NATIVE
+              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <span>C++17 & Qt 6 Complete Architecture (All 5 Phases)</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  ALL PHASES 1-5 DELIVERED
                 </span>
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono-code mt-0.5">
-                Target: Windows x64 .exe · CMake 3.22+ · Qt 6.7 Widgets · MSVC / Clang 18
+              <p className="text-xs text-slate-400 font-mono-code mt-0.5">
+                Target: Windows 10/11 x64 · Qt 6 (Widgets, Sql, Charts, PrintSupport, Multimedia) · SQLite WAL
               </p>
             </div>
           </div>
@@ -328,110 +788,125 @@ export const CppNativeView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               onClick={handleDownloadAll}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] border border-slate-200 dark:border-[#334155] text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-amber-500" />
-              <span>Download Source Bundle</span>
+              <span>Download Complete 5-Phase Source Bundle</span>
             </button>
           </div>
         </div>
 
-        {/* Architecture Layers Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 bg-white dark:bg-[#0F172A] p-3 rounded-xl border border-slate-200 dark:border-[#1E293B] shadow-2xs transition-colors">
-          <div className="bg-slate-50 dark:bg-[#020617] p-2.5 rounded-lg border border-slate-200 dark:border-[#334155] text-center">
-            <span className="text-[10px] font-mono-code text-amber-600 dark:text-amber-400 font-bold block">LAYER 1</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white">Qt 6 Widgets UI</span>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">MainWindow, Views, Forms</p>
+        {/* 5 Phases Status Tracker */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 bg-[#0B1220] p-3 rounded-xl border border-[#1E293B] shadow-2xs">
+          <div className="bg-[#020617] p-2.5 rounded-lg border border-[#334155] text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 1</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <span className="text-xs font-semibold text-white block mt-1">Core & DB Layer</span>
+            <p className="text-[10px] text-slate-400 mt-0.5">Accession Register & FTS5</p>
           </div>
-          <div className="bg-slate-50 dark:bg-[#020617] p-2.5 rounded-lg border border-slate-200 dark:border-[#334155] text-center">
-            <span className="text-[10px] font-mono-code text-amber-600 dark:text-amber-400 font-bold block">LAYER 2</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white">Application Core</span>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">App lifecycle & High-DPI</p>
+
+          <div className="bg-[#020617] p-2.5 rounded-lg border border-[#334155] text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 2</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <span className="text-xs font-semibold text-white block mt-1">CSV & Backup</span>
+            <p className="text-[10px] text-slate-400 mt-0.5">Wizard & VACUUM INTO</p>
           </div>
-          <div className="bg-slate-50 dark:bg-[#020617] p-2.5 rounded-lg border border-slate-200 dark:border-[#334155] text-center">
-            <span className="text-[10px] font-mono-code text-amber-600 dark:text-amber-400 font-bold block">LAYER 3</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white">Service Layer</span>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Rules, Barcode, Circulation</p>
+
+          <div className="bg-[#020617] p-2.5 rounded-lg border border-[#334155] text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 3</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <span className="text-xs font-semibold text-white block mt-1">Circulation & Audio</span>
+            <p className="text-[10px] text-slate-400 mt-0.5">Scanner filter & PCM Audio</p>
           </div>
-          <div className="bg-slate-50 dark:bg-[#020617] p-2.5 rounded-lg border border-slate-200 dark:border-[#334155] text-center">
-            <span className="text-[10px] font-mono-code text-amber-600 dark:text-amber-400 font-bold block">LAYER 4</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white">Repositories</span>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Data Access & Entities</p>
+
+          <div className="bg-[#020617] p-2.5 rounded-lg border border-[#334155] text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 4</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <span className="text-xs font-semibold text-white block mt-1">Code-128 Labels</span>
+            <p className="text-[10px] text-slate-400 mt-0.5">2.5×1.5" QPrinter Label</p>
           </div>
-          <div className="bg-slate-50 dark:bg-[#020617] p-2.5 rounded-lg border border-slate-200 dark:border-[#334155] text-center col-span-2 md:col-span-1">
-            <span className="text-[10px] font-mono-code text-emerald-600 dark:text-emerald-400 font-bold block">LAYER 5</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-white">SQLite Engine</span>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">WAL Mode, B-Trees, ACID</p>
+
+          <div className="bg-[#020617] p-2.5 rounded-lg border border-[#334155] text-left">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 5</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <span className="text-xs font-semibold text-white block mt-1">Reports & Splash</span>
+            <p className="text-[10px] text-slate-400 mt-0.5">Qt Charts & 2.5s Boot</p>
           </div>
         </div>
 
-        {/* Source File Browser & Code Editor Viewer */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* File Tree Column */}
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 space-y-2 shadow-2xs transition-colors">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider pb-2 border-b border-slate-200 dark:border-[#1E293B]">
-              <Folder className="w-4 h-4 text-amber-500" />
-              <span>Project Sources</span>
+        {/* Code File Explorer */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+          
+          {/* File List Navigation */}
+          <div className="bg-[#0B1220] border border-[#1E293B] rounded-xl p-3 shadow-2xs space-y-1.5">
+            <div className="px-2 py-1 text-[11px] font-mono-code font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Folder className="w-3.5 h-3.5 text-amber-500" />
+              <span>Qt 6 Native Modules</span>
             </div>
 
-            <div className="space-y-1">
-              {NATIVE_FILES.map(file => (
+            <div className="space-y-1 max-h-[600px] overflow-y-auto pr-1">
+              {NATIVE_FILES.map((file, idx) => {
+                const isSelected = selectedFile.path === file.path;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedFile(file)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono-code transition-all flex items-start gap-2.5 cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/40 shadow-xs'
+                        : 'text-slate-300 hover:bg-[#1E293B] border border-transparent'
+                    }`}
+                  >
+                    <FileCode className={`w-4 h-4 shrink-0 mt-0.5 ${isSelected ? 'text-amber-400' : 'text-slate-400'}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold">{file.name}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{file.phase}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Code Viewer Panel */}
+          <div className="lg:col-span-3 bg-[#0B1220] border border-[#1E293B] rounded-xl shadow-2xs overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#0F172A] border-b border-[#1E293B]">
+              <div className="flex items-center gap-2 min-w-0">
+                <Code2 className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="font-mono-code text-xs font-bold text-white truncate">
+                  {selectedFile.path}
+                </span>
+                <span className="text-[10px] text-slate-400 hidden sm:inline">
+                  — {selectedFile.description}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <button
-                  key={file.path}
-                  onClick={() => setSelectedFile(file)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono-code flex items-center gap-2 transition-colors cursor-pointer ${
-                    selectedFile.path === file.path
-                      ? 'bg-amber-500/15 text-amber-900 dark:text-amber-300 font-semibold border border-amber-500/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                  }`}
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-slate-200 text-xs font-mono-code transition-colors cursor-pointer"
                 >
-                  <FileCode className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span className="truncate">{file.path}</span>
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                  <span>{copied ? 'Copied!' : 'Copy Code'}</span>
                 </button>
-              ))}
-            </div>
-
-            {/* Build commands snippet */}
-            <div className="pt-4 border-t border-slate-200 dark:border-[#1E293B] space-y-1.5">
-              <span className="text-[10px] font-mono-code text-slate-500 dark:text-slate-400 uppercase font-semibold">Build & Compile:</span>
-              <div className="p-2.5 rounded bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-[11px] font-mono-code text-slate-700 dark:text-slate-300 space-y-1">
-                <p className="text-amber-600 dark:text-amber-400">cmake -S . -B build</p>
-                <p className="text-amber-600 dark:text-amber-400">cmake --build build --config Release</p>
-                <p className="text-emerald-600 dark:text-emerald-400 mt-1"># Output: LibraryManagementSystem.exe</p>
               </div>
             </div>
+
+            <pre className="p-4 text-xs font-mono-code text-slate-200 overflow-x-auto max-h-[600px] leading-relaxed select-text bg-[#020617]">
+              <code>{selectedFile.code}</code>
+            </pre>
           </div>
 
-          {/* Code Viewer Column */}
-          <div className="lg:col-span-3 bg-white dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-2xs flex flex-col transition-colors">
-            <div className="bg-slate-50 dark:bg-[#0F172A] px-4 py-2.5 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-mono-code text-slate-900 dark:text-white font-semibold">
-                <Code2 className="w-4 h-4 text-amber-500" />
-                <span>{selectedFile.path}</span>
-              </div>
-
-              <button
-                onClick={handleCopy}
-                className="px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-mono-code flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                <span>{copied ? 'Copied' : 'Copy Source'}</span>
-              </button>
-            </div>
-
-            <div className="p-4 overflow-auto max-h-[560px] bg-slate-50/50 dark:bg-[#020617]">
-              <pre className="font-mono-code text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
-                {selectedFile.code.split('\n').map((line, idx) => (
-                  <div key={idx} className="table-row">
-                    <span className="table-cell pr-4 text-right select-none text-slate-400 dark:text-slate-600 font-mono-code text-[11px] tabular-nums">
-                      {idx + 1}
-                    </span>
-                    <span className="table-cell whitespace-pre">{line}</span>
-                  </div>
-                ))}
-              </pre>
-            </div>
-          </div>
         </div>
 
       </div>

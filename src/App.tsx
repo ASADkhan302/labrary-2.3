@@ -255,6 +255,38 @@ export default function App() {
     return res;
   };
 
+  const handleUpdateBorrower = (id: string, updates: Partial<Borrower>) => {
+    const res = LibraryStorage.updateBorrower(id, updates);
+    if (res.success) {
+      reloadData();
+      playClickSound();
+      showToast('Member profile updated successfully.');
+    } else {
+      playErrorBeep();
+      showToast(res.message, true);
+    }
+    return res;
+  };
+
+  const handleBatchImportBorrowers = (borrowersList: Omit<Borrower, 'id' | 'created_at' | 'updated_at' | 'is_active'>[]) => {
+    let imported = 0;
+    const errors: string[] = [];
+    borrowersList.forEach((b) => {
+      const res = LibraryStorage.addBorrower(b);
+      if (res.success) {
+        imported++;
+      } else {
+        errors.push(`${b.university_id || b.name}: ${res.message}`);
+      }
+    });
+    if (imported > 0) {
+      reloadData();
+      playSuccessBarcodeBeep();
+      showToast(`Batch import complete: ${imported} members enrolled into database.`);
+    }
+    return { success: true, imported, errors };
+  };
+
   const handleDeleteBorrowerRequest = (borrower: Borrower) => {
     setBorrowerToDelete(borrower);
   };
@@ -282,8 +314,10 @@ export default function App() {
       playSuccessBarcodeBeep();
       showToast(res.message);
     } else {
+      playErrorBeep();
       showToast(res.message, true);
     }
+    return res;
   };
 
   const handleReturnBook = (transactionId: string) => {
@@ -293,8 +327,10 @@ export default function App() {
       playSuccessBarcodeBeep();
       showToast(res.message);
     } else {
+      playErrorBeep();
       showToast(res.message, true);
     }
+    return res;
   };
 
   // Quick Export
@@ -321,6 +357,13 @@ export default function App() {
     reloadData();
     setShowSplash(true);
     setIsAppEntered(false);
+  };
+
+  const handleClearDemoData = () => {
+    const res = LibraryStorage.clearDemoData();
+    reloadData();
+    playClickSound();
+    showToast(res.message);
   };
 
   // Count active loans
@@ -442,8 +485,18 @@ export default function App() {
             borrowers={borrowers}
             transactions={transactions}
             onAddBorrower={handleAddBorrower}
-            onOpenBorrowerDetails={(borrowerId) => setSelectedBorrowerIdForDetails(borrowerId)}
+            onUpdateBorrower={handleUpdateBorrower}
             onDeleteBorrower={handleDeleteBorrowerRequest}
+            onOpenCirculationForBorrower={(borrowerId) => {
+              setActiveTab('circulation');
+            }}
+            onReturnLoan={handleReturnBook}
+            onOpenBookDetails={(bookId) => {
+              const b = books.find(item => item.id === bookId);
+              if (b) setSelectedBookForDetails(b);
+            }}
+            onBatchImportBorrowers={handleBatchImportBorrowers}
+            onReloadData={reloadData}
           />
         )}
 
@@ -503,6 +556,7 @@ export default function App() {
               showToast('System configuration saved.');
             }}
             onResetDemoData={handleResetDemoData}
+            onClearDemoData={handleClearDemoData}
             onPlayBootAnimation={handleReplaySplash}
             onOpenStorageModal={() => setIsStorageModalOpen(true)}
           />
@@ -572,9 +626,13 @@ export default function App() {
           const b = books.find(item => item.id === bookId);
           if (b) setSelectedBookForDetails(b);
         }}
-        onDeleteBorrower={(borrower) => {
+        onIssueBook={(b) => {
           setSelectedBorrowerIdForDetails(null);
-          handleDeleteBorrowerRequest(borrower);
+          setActiveTab('circulation');
+        }}
+        onToggleStatus={(b) => {
+          const newStatus: BorrowerStatus = b.status === 'active' ? 'suspended' : 'active';
+          handleUpdateBorrower(b.id, { status: newStatus, is_active: newStatus === 'active' });
         }}
       />
 

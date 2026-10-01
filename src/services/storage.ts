@@ -235,15 +235,64 @@ export class LibraryStorage {
     return this.deleteBook(id, false);
   }
 
+  static normalizePakistaniPhone(raw: string): string {
+    if (!raw) return '';
+    let digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('92') && digits.length >= 12) {
+      digits = '0' + digits.substring(2);
+    }
+    if (digits.length === 11 && digits.startsWith('03')) {
+      return `${digits.substring(0, 4)}-${digits.substring(4)}`;
+    }
+    return raw.trim();
+  }
+
   // --- Borrowers ---
   static getBorrowers(): Borrower[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.BORROWERS);
+      let list: Borrower[];
       if (!data) {
-        localStorage.setItem(STORAGE_KEYS.BORROWERS, JSON.stringify(INITIAL_BORROWERS));
-        return INITIAL_BORROWERS;
+        list = INITIAL_BORROWERS;
+        localStorage.setItem(STORAGE_KEYS.BORROWERS, JSON.stringify(list));
+        return list;
       }
-      return JSON.parse(data);
+      list = JSON.parse(data);
+      // Migration: ensure role, university_id, barcode, borrow_limit, status, etc.
+      let changed = false;
+      list = list.map(b => {
+        let mod = false;
+        const role = b.role || (b.name?.includes('Dr.') || b.name?.includes('Prof') ? 'Faculty' : 'Student');
+        const uid = b.university_id || b.student_id || `ULM-${b.id}`;
+        const barcode = b.barcode || uid;
+        const status = b.status || (b.is_active ? 'active' : 'left');
+        const limit = b.borrow_limit || (role === 'Faculty' ? 10 : role === 'Staff' ? 5 : 3);
+        const joined = b.joined_date || b.created_at || new Date().toISOString().split('T')[0];
+
+        if (b.role !== role || b.university_id !== uid || b.barcode !== barcode || b.status !== status || b.borrow_limit !== limit || !b.joined_date) {
+          mod = true;
+          changed = true;
+        }
+
+        return {
+          ...b,
+          role: role as any,
+          university_id: uid,
+          student_id: uid,
+          barcode,
+          status: status as any,
+          borrow_limit: limit,
+          joined_date: joined,
+          phone: b.phone ? this.normalizePakistaniPhone(b.phone) : '0300-0000000',
+          department: b.department || 'Computer Science',
+          program: b.program || (role === 'Student' ? 'BCS' : role),
+        };
+      });
+
+      if (changed) {
+        localStorage.setItem(STORAGE_KEYS.BORROWERS, JSON.stringify(list));
+      }
+      return list;
     } catch {
       return INITIAL_BORROWERS;
     }
@@ -253,17 +302,34 @@ export class LibraryStorage {
     localStorage.setItem(STORAGE_KEYS.BORROWERS, JSON.stringify(borrowers));
   }
 
-  static addBorrower(borrower: Omit<Borrower, 'id' | 'created_at' | 'updated_at' | 'is_active'>): { success: boolean; message: string; borrower?: Borrower } {
+  static addBorrower(borrower: Omit<Borrower, 'id' | 'created_at' | 'updated_at' | 'is_active'>): { success: boolean; message: string; borrower?: Borrower; existingBorrowerId?: string } {
     const borrowers = this.getBorrowers();
-    const existing = borrowers.find(b => b.student_id.trim().toUpperCase() === borrower.student_id.trim().toUpperCase() && b.is_active);
+    const uid = (borrower.university_id || borrower.student_id || '').trim().toUpperCase();
+
+    // Check duplicate university ID
+    const existing = borrowers.find(b => (b.university_id || b.student_id).trim().toUpperCase() === uid && b.status !== 'left');
     if (existing) {
-      return { success: false, message: `Student ID "${borrower.student_id}" is already registered to "${existing.name}".` };
+      return { 
+        success: false, 
+        message: `Already exists: ${existing.name}`,
+        existingBorrowerId: existing.id
+      };
     }
 
+    const normPhone = this.normalizePakistaniPhone(borrower.phone);
     const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
     const newBorrower: Borrower = {
       ...borrower,
       id: this.generateId('bor'),
+      role: borrower.role || 'Student',
+      university_id: uid,
+      student_id: uid,
+      barcode: borrower.barcode || uid,
+      phone: normPhone,
+      borrow_limit: borrower.borrow_limit || (borrower.role === 'Faculty' ? 10 : borrower.role === 'Staff' ? 5 : 3),
+      joined_date: borrower.joined_date || new Date().toISOString().split('T')[0],
+      valid_until: borrower.valid_until || null,
+      status: borrower.status || 'active',
       created_at: now,
       updated_at: now,
       is_active: true,
@@ -274,13 +340,74 @@ export class LibraryStorage {
 
     this.logHistory({
       action: 'BORROWER_ADDED',
-      description: `Registered borrower "${newBorrower.name}" (${newBorrower.student_id})`,
-      barcode: newBorrower.student_id,
+      description: `Registered ${newBorrower.role} "${newBorrower.name}" (${newBorrower.university_id})`,
+      barcode: newBorrower.university_id,
       borrower_id: newBorrower.id,
       user: 'Desk-Registrar',
     });
 
-    return { success: true, message: 'Borrower enrolled successfully.', borrower: newBorrower };
+    return { success: true, message: 'Person enrolled successfully.', borrower: newBorrower };
+  }
+
+  static updateBorrower(id: string, updates: Partial<Borrower>): { success: boolean; message: string; borrower?: Borrower } {
+    const borrowers = this.getBorrowers();
+    const index = borrowers.findIndex(b => b.id === id);
+    if (index === -1) {
+      return { success: false, message: 'Borrower record not found in database.' };
+    }
+
+    if (updates.university_id) {
+      const targetUid = updates.university_id.trim().toUpperCase();
+      const duplicate = borrowers.find(b => b.id !== id && (b.university_id || b.student_id).trim().toUpperCase() === targetUid && b.status !== 'left');
+      if (duplicate) {
+        return { success: false, message: `University ID "${updates.university_id}" is already assigned to "${duplicate.name}".` };
+      }
+    }
+
+    const updated: Borrower = {
+      ...borrowers[index],
+      ...updates,
+      student_id: updates.university_id || borrowers[index].university_id || borrowers[index].student_id,
+      barcode: updates.barcode || updates.university_id || borrowers[index].barcode,
+      phone: updates.phone ? this.normalizePakistaniPhone(updates.phone) : borrowers[index].phone,
+      updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+    };
+
+    borrowers[index] = updated;
+    this.saveBorrowers(borrowers);
+
+    this.logHistory({
+      action: 'BORROWER_UPDATED',
+      description: `Updated borrower profile "${updated.name}" (${updated.university_id})`,
+      barcode: updated.university_id,
+      borrower_id: id,
+      user: 'Librarian-Admin',
+    });
+
+    return { success: true, message: 'Borrower profile updated successfully.', borrower: updated };
+  }
+
+  static setBorrowerStatus(id: string, newStatus: BorrowerStatus): { success: boolean; message: string } {
+    const borrowers = this.getBorrowers();
+    const index = borrowers.findIndex(b => b.id === id);
+    if (index === -1) {
+      return { success: false, message: 'Borrower record not found.' };
+    }
+
+    borrowers[index].status = newStatus;
+    borrowers[index].is_active = newStatus === 'active';
+    borrowers[index].updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    this.saveBorrowers(borrowers);
+
+    this.logHistory({
+      action: 'BORROWER_STATUS_CHANGED',
+      description: `Changed status of "${borrowers[index].name}" to ${newStatus}`,
+      barcode: borrowers[index].university_id,
+      borrower_id: id,
+      user: 'Librarian-Admin'
+    });
+
+    return { success: true, message: `Member status updated to "${newStatus}".` };
   }
 
   static deleteBorrower(id: string, permanent: boolean = true): { success: boolean; message: string } {
@@ -297,17 +424,40 @@ export class LibraryStorage {
       const bookTitles = activeLoans.map(t => t.book_name || 'loaned item').join(', ');
       return {
         success: false,
-        message: `Cannot delete "${borrowers[index].name}": Member currently has ${activeLoans.length} active loan(s) (${bookTitles}). Return all borrowed books at the circulation desk first.`
+        message: `Cannot delete "${borrowers[index].name}": Member currently has ${activeLoans.length} active loan(s) (${bookTitles}). Return all borrowed books at circulation desk first.`
       };
     }
 
     const target = borrowers[index];
     const memberName = target.name;
-    const studentId = target.student_id;
+    const studentId = target.university_id || target.student_id;
+
+    // Circulation rule: Never hard-delete a person who has loan history; set status to "left" instead
+    const hasHistory = transactions.some(t => t.borrower_id === id);
+    if (hasHistory) {
+      borrowers[index].status = 'left';
+      borrowers[index].is_active = false;
+      borrowers[index].updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      this.saveBorrowers(borrowers);
+
+      this.logHistory({
+        action: 'BORROWER_ARCHIVED',
+        description: `Member "${memberName}" (${studentId}) has loan transaction history. Ledger preserved and status set to 'left'.`,
+        barcode: studentId,
+        borrower_id: id,
+        user: 'Librarian-Admin',
+      });
+
+      return {
+        success: true,
+        message: `Member "${memberName}" has loan history on file. Record preserved in audit log and status set to "left".`
+      };
+    }
 
     if (permanent) {
       borrowers.splice(index, 1);
     } else {
+      borrowers[index].status = 'left';
       borrowers[index].is_active = false;
     }
     this.saveBorrowers(borrowers);
@@ -322,12 +472,42 @@ export class LibraryStorage {
 
     return {
       success: true,
-      message: `Student "${memberName}" (${studentId}) removed from library system successfully.`
+      message: `Person "${memberName}" (${studentId}) removed from library system successfully.`
     };
   }
 
   static softDeleteBorrower(id: string): { success: boolean; message: string } {
     return this.deleteBorrower(id, false);
+  }
+
+  static clearDemoData(): { success: boolean; message: string; count: number } {
+    const borrowers = this.getBorrowers();
+    const demoBorrowers = borrowers.filter(b => b.notes === 'DEMO');
+    const demoBorrowerIds = new Set(demoBorrowers.map(b => b.id));
+    const remainingBorrowers = borrowers.filter(b => b.notes !== 'DEMO');
+
+    const books = this.getBooks();
+    const remainingBooks = books.filter(b => (b as any).source_remarks !== 'DEMO');
+
+    const transactions = this.getTransactions();
+    const remainingTransactions = transactions.filter(t => !demoBorrowerIds.has(t.borrower_id));
+
+    this.saveBorrowers(remainingBorrowers);
+    this.saveBooks(remainingBooks);
+    this.saveTransactions(remainingTransactions);
+
+    this.logHistory({
+      action: 'CLEAR_DEMO',
+      description: `Cleared ${demoBorrowers.length} sample demo people (notes = 'DEMO') and demo records.`,
+      barcode: 'DEMO-CLEAR',
+      user: 'Librarian-Admin'
+    });
+
+    return {
+      success: true,
+      message: `Cleared ${demoBorrowers.length} demo borrower records.`,
+      count: demoBorrowers.length
+    };
   }
 
   // --- Transactions & Circulation ---
@@ -359,8 +539,59 @@ export class LibraryStorage {
     }
 
     const borrowers = this.getBorrowers();
-    const borrower = borrowers.find(b => b.id === borrowerId && b.is_active);
+    const borrower = borrowers.find(b => b.id === borrowerId);
     if (!borrower) return { success: false, message: 'Borrower record not found.' };
+
+    // CIRCULATION RULES ENFORCEMENT:
+    // 1. Status is not active
+    if (borrower.status !== 'active') {
+      return {
+        success: false,
+        message: `Issuing blocked: Member account status is "${borrower.status.toUpperCase()}". Only active members can borrow library books.`
+      };
+    }
+
+    // 2. Valid until has passed
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (borrower.valid_until && borrower.valid_until < todayStr) {
+      return {
+        success: false,
+        message: `Issuing blocked: Membership card expired on ${borrower.valid_until}. Please renew membership credentials at registration desk.`
+      };
+    }
+
+    // 3. Borrow limit reached
+    const transactions = this.getTransactions();
+    const activeLoans = transactions.filter(t => t.borrower_id === borrowerId && t.status !== 'RETURNED');
+    const limit = borrower.borrow_limit || (borrower.role === 'Faculty' ? 10 : borrower.role === 'Staff' ? 5 : 3);
+    if (activeLoans.length >= limit) {
+      return {
+        success: false,
+        message: `Issuing blocked: Borrow limit reached (${activeLoans.length} / ${limit} books). Return an existing borrowed item before issuing new books.`
+      };
+    }
+
+    // 4. Unpaid fines exceed settings threshold (default Rs 500)
+    const settings = this.getSettings();
+    const fineRate = settings.fine_per_day_pkr || 50;
+    const maxUnpaidFine = (settings as any).max_unpaid_fine_pkr || 500;
+    let unpaidFineTotal = 0;
+    activeLoans.forEach(loan => {
+      if (loan.due_date < todayStr) {
+        const diffMs = new Date(todayStr).getTime() - new Date(loan.due_date).getTime();
+        const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (days > 0) {
+          unpaidFineTotal += days * fineRate;
+        }
+      }
+    });
+
+    if (unpaidFineTotal > maxUnpaidFine) {
+      return {
+        success: false,
+        message: `Issuing blocked: Outstanding overdue fines (Rs ${unpaidFineTotal}) exceed institutional limit of Rs ${maxUnpaidFine}. Settle overdue fines to restore circulation privileges.`
+      };
+    }
 
     // Deduct available copy: Available = Available - 1
     book.available_quantity -= 1;
@@ -379,7 +610,7 @@ export class LibraryStorage {
       book_name: book.book_name,
       borrower_name: borrower.name,
       barcode: book.barcode,
-      student_id: borrower.student_id,
+      student_id: borrower.university_id || borrower.student_id,
       action: 'ISSUE',
       issue_date: issueDateStr,
       due_date: dueDateStr,
@@ -389,13 +620,12 @@ export class LibraryStorage {
       created_at: nowTimeStr,
     };
 
-    const transactions = this.getTransactions();
     transactions.unshift(newTx);
     this.saveTransactions(transactions);
 
     this.logHistory({
       action: 'BOOK_ISSUED',
-      description: `Issued "${book.book_name}" to ${borrower.name} (${borrower.student_id}) - Due: ${dueDateStr}`,
+      description: `Issued "${book.book_name}" to ${borrower.name} (${borrower.university_id || borrower.student_id}) - Due: ${dueDateStr}`,
       barcode: book.barcode,
       book_id: book.id,
       borrower_id: borrower.id,

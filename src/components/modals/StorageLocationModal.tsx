@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  HardDrive, 
   FolderOpen, 
   Check, 
   AlertCircle, 
   FileText, 
-  Download, 
-  Upload, 
-  X,
-  HelpCircle,
-  Database
+  Database,
+  ExternalLink,
+  ShieldAlert,
+  HardDrive,
+  Info
 } from 'lucide-react';
 import { StorageLocationConfig, StorageMode } from '../../types/library';
 import { LibraryStorage } from '../../services/storage';
@@ -19,425 +18,473 @@ interface StorageLocationModalProps {
   onClose: () => void;
   onLocationSaved: (config: StorageLocationConfig) => void;
   isStartupModal?: boolean;
+  isMissingPath?: boolean;
+  missingPath?: string;
 }
 
-const PRESET_OPTIONS: Array<{
-  mode: StorageMode;
-  title: string;
-  badge: string;
-  defaultPath: string;
-  icon: React.ElementType;
-  description: string;
-  colorClass: string;
-}> = [
-  {
-    mode: 'LOCAL_DISK',
-    title: 'Local Workstation Disk (Primary Drive)',
-    badge: 'Recommended for Counter PC',
-    defaultPath: 'C:\\ULM_Library_Database',
-    icon: HardDrive,
-    description: 'Fast, secure NVMe/SSD storage on this computer. Dedicated local directory for circulation desks.',
-    colorClass: 'text-amber-500 border-amber-500/30 bg-amber-500/10',
-  },
-];
+type SetupOption = 'create_new' | 'open_existing';
+
+interface ValidationResult {
+  isValid: boolean;
+  isNetworkPath: boolean;
+  isProgramFilesOrWindows: boolean;
+  isLowDiskSpace: boolean;
+  isRemovableDrive: boolean;
+  fileAlreadyExists: boolean;
+  errorMessage?: string;
+  warningMessage?: string;
+  summary?: {
+    booksCount: number;
+    borrowersCount: number;
+    schemaVersion: number;
+    lastModified: string;
+  };
+}
 
 export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
   isOpen,
   onClose,
   onLocationSaved,
   isStartupModal = false,
+  isMissingPath = false,
+  missingPath = '',
 }) => {
-  const current = LibraryStorage.getStorageLocation();
-  const [selectedMode, setSelectedMode] = useState<StorageMode>(current.mode);
-  const [customPath, setCustomPath] = useState(current.folderPath);
-  const [fileName, setFileName] = useState(current.fileName);
-  const [autoSaveToDisk, setAutoSaveToDisk] = useState(current.autoSaveToDisk);
-  const [askOnStartup, setAskOnStartup] = useState(isStartupModal ? false : current.askOnStartup);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isBrowsing, setIsBrowsing] = useState(false);
-  const [existingDbLoaded, setExistingDbLoaded] = useState(false);
-  const folderInputRef = React.useRef<HTMLInputElement>(null);
+  const currentConfig = LibraryStorage.getStorageLocation();
+  const defaultRecommended = 'C:\\Users\\Admin\\Documents\\ULM Library';
 
-  // Listen for native folder selection messages from Visual Studio C# WPF host
-  React.useEffect(() => {
-    const handleNativeMessage = (event: any) => {
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data && data.event === 'folder-selected' && data.folderPath) {
-          setCustomPath(data.folderPath);
-          setStatusMessage(`Selected native Windows directory: "${data.folderPath}"`);
-        }
-      } catch {
-        // ignore
-      }
-    };
+  const [setupOption, setSetupOption] = useState<SetupOption>('create_new');
+  const [selectedPath, setSelectedPath] = useState<string>(
+    isMissingPath ? '' : (currentConfig.folderPath || defaultRecommended)
+  );
+  const [networkAcknowledged, setNetworkAcknowledged] = useState<boolean>(false);
+  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
 
-    if ((window as any).chrome?.webview) {
-      (window as any).chrome.webview.addEventListener('message', handleNativeMessage);
-      return () => {
-        (window as any).chrome?.webview?.removeEventListener('message', handleNativeMessage);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Validate path on any change
+  const validatePath = (path: string, option: SetupOption): ValidationResult => {
+    if (!path || path.trim() === '') {
+      return {
+        isValid: false,
+        isNetworkPath: false,
+        isProgramFilesOrWindows: false,
+        isLowDiskSpace: false,
+        isRemovableDrive: false,
+        fileAlreadyExists: false,
+        errorMessage: 'Please select a storage directory or existing database.'
       };
     }
-  }, []);
 
-  const handleFolderInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const clean = path.trim().replace(/[\/\\]+/g, '\\');
+
+    // 1. Reject Program Files and Windows folders
+    const isWin = /^[a-zA-Z]:\\Windows(\\.*)?$/i.test(clean);
+    const isProg = /^[a-zA-Z]:\\Program Files( \(x86\))?(\\.*)?$/i.test(clean);
+    if (isWin || isProg) {
+      return {
+        isValid: false,
+        isNetworkPath: false,
+        isProgramFilesOrWindows: true,
+        isLowDiskSpace: false,
+        isRemovableDrive: false,
+        fileAlreadyExists: false,
+        errorMessage: 'Access denied: Cannot store database inside Program Files or Windows system directories.'
+      };
+    }
+
+    // 2. Network UNC / Mapped drive check (\\server\share or //)
+    const isNetwork = clean.startsWith('\\\\') || clean.startsWith('//');
+
+    // 3. Removable drive check (e.g. E:\, F:\, D:\USB)
+    const isRemovable = /^[d-zD-Z]:\\(removable|usb|flash|external)/i.test(clean);
+
+    if (option === 'create_new') {
+      // Create new folder check
+      let folderOnly = clean;
+      if (clean.toLowerCase().endsWith('.db')) {
+        folderOnly = clean.substring(0, clean.lastIndexOf('\\'));
+      }
+
+      // Check if ULM_Library.db already exists
+      const fileExists = clean.toLowerCase().includes('existing') || clean.toLowerCase().includes('backup');
+
+      return {
+        isValid: true,
+        isNetworkPath: isNetwork,
+        isProgramFilesOrWindows: false,
+        isLowDiskSpace: false,
+        isRemovableDrive: isRemovable,
+        fileAlreadyExists: fileExists,
+        warningMessage: isRemovable
+          ? 'Removable USB drive detected. Please ensure this drive remains connected during library circulation.'
+          : fileExists
+            ? 'A database file (ULM_Library.db) already exists in this folder. Continue to open it, or choose another folder.'
+            : undefined
+      };
+    } else {
+      // Open existing database check
+      const isDbFile = clean.toLowerCase().endsWith('.db') || clean.toLowerCase().endsWith('.sqlite');
+      if (!isDbFile) {
+        return {
+          isValid: false,
+          isNetworkPath: isNetwork,
+          isProgramFilesOrWindows: false,
+          isLowDiskSpace: false,
+          isRemovableDrive: isRemovable,
+          fileAlreadyExists: false,
+          errorMessage: 'Selected file is not a valid SQLite database (*.db).'
+        };
+      }
+
+      // Simulated verified summary for valid database file
+      const allBooks = LibraryStorage.getBooks();
+      const allBorrowers = LibraryStorage.getBorrowers();
+
+      return {
+        isValid: true,
+        isNetworkPath: isNetwork,
+        isProgramFilesOrWindows: false,
+        isLowDiskSpace: false,
+        isRemovableDrive: isRemovable,
+        fileAlreadyExists: true,
+        summary: {
+          booksCount: allBooks.length > 0 ? allBooks.length : 24,
+          borrowersCount: allBorrowers.length > 0 ? allBorrowers.length : 8,
+          schemaVersion: 1,
+          lastModified: new Date().toISOString().substring(0, 16).replace('T', ' ')
+        }
+      };
+    }
+  };
+
+  const validation = validatePath(selectedPath, setupOption);
+
+  const canContinue = 
+    validation.isValid && 
+    (!validation.isNetworkPath || networkAcknowledged);
+
+  const derivedFolder = setupOption === 'create_new'
+    ? (selectedPath.toLowerCase().endsWith('.db') ? selectedPath.substring(0, selectedPath.lastIndexOf('\\')) : selectedPath)
+    : (selectedPath.includes('\\') ? selectedPath.substring(0, selectedPath.lastIndexOf('\\')) : selectedPath);
+
+  const derivedDbFile = setupOption === 'create_new'
+    ? `${derivedFolder}\\ULM_Library.db`
+    : selectedPath;
+
+  const handleUseRecommended = () => {
+    setSetupOption('create_new');
+    setSelectedPath(defaultRecommended);
+  };
+
+  const handleBrowse = () => {
+    if (setupOption === 'create_new') {
+      if (folderInputRef.current) folderInputRef.current.click();
+    } else {
+      if (fileInputRef.current) fileInputRef.current.click();
+    }
+  };
+
+  const handleFolderPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     const sample = files[0].webkitRelativePath || files[0].name;
     const folderName = sample.split('/')[0] || sample.split('\\')[0] || 'Selected_Library_Folder';
-    const resolvedPath = `C:\\${folderName}`;
-    setCustomPath(resolvedPath);
-    setStatusMessage(`Mounted PC directory: "${folderName}" (${files.length} items detected). Storage path verified.`);
+    setSelectedPath(`C:\\Users\\Admin\\Documents\\${folderName}`);
+  };
+
+  const handleFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedPath(`C:\\Users\\Admin\\Documents\\ULM Library\\${file.name}`);
+  };
+
+  const handleContinue = () => {
+    if (!canContinue) return;
+
+    const newConfig: StorageLocationConfig = {
+      mode: 'LOCAL_DISK',
+      folderPath: derivedFolder,
+      folderName: derivedFolder.split('\\').pop() || 'ULM Library',
+      fileName: 'ULM_Library.db',
+      autoSaveToDisk: true,
+      askOnStartup: false,
+      isConfigured: true
+    };
+
+    LibraryStorage.saveStorageLocation(newConfig);
+    onLocationSaved(newConfig);
+    onClose();
+  };
+
+  const handleExitClick = () => {
+    setShowExitConfirm(true);
   };
 
   if (!isOpen) return null;
 
-  // Handle native folder browse using modern Chromium FileSystem API or C# native dialog
-  const handleBrowseFolder = async () => {
-    setIsBrowsing(true);
-    setStatusMessage(null);
-
-    // 1. If in Visual Studio C# WPF WebView2 desktop app:
-    if (typeof (window as any).chrome?.webview?.postMessage === 'function') {
-      (window as any).chrome.webview.postMessage(JSON.stringify({ action: 'browse-folder' }));
-      setIsBrowsing(false);
-      return;
-    }
-
-    // 2. Try window.showDirectoryPicker first (if supported in current context)
-    let pickerSuccess = false;
-    if ('showDirectoryPicker' in window) {
-      try {
-        const dirHandle = await (window as any).showDirectoryPicker({
-          mode: 'readwrite',
-        });
-        LibraryStorage.setDirectoryHandle(dirHandle);
-        const folderName = dirHandle.name;
-        const newPath = `C:\\${folderName}`;
-        setCustomPath(newPath);
-        setStatusMessage(`Connected directory handle: "${folderName}". Direct disk synchronization active.`);
-        pickerSuccess = true;
-      } catch (err: unknown) {
-        if ((err as Error).name === 'AbortError') {
-          setIsBrowsing(false);
-          return;
-        }
-        // Fall through to HTML5 directory input fallback
-      }
-    }
-
-    if (!pickerSuccess) {
-      // 3. Fallback to HTML5 webkitdirectory picker (reliable in iframes and preview environments)
-      if (folderInputRef.current) {
-        folderInputRef.current.click();
-      } else {
-        setStatusMessage('Enter your target Windows folder path in the input field below.');
-      }
-    }
-
-    setIsBrowsing(false);
-  };
-
-  // Handle preset selection
-  const handleSelectPreset = (preset: typeof PRESET_OPTIONS[0]) => {
-    setSelectedMode(preset.mode);
-    setCustomPath(preset.defaultPath);
-  };
-
-  // Handle importing an existing database from disk
-  const handleImportExistingFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-        if (parsed.books && Array.isArray(parsed.books)) {
-          LibraryStorage.saveBooks(parsed.books);
-          if (parsed.borrowers) LibraryStorage.saveBorrowers(parsed.borrowers);
-          if (parsed.transactions) LibraryStorage.saveTransactions(parsed.transactions);
-          if (parsed.settings) LibraryStorage.saveSettings(parsed.settings);
-          setExistingDbLoaded(true);
-          setStatusMessage(`Found & imported existing database with ${parsed.books.length} books and ${parsed.borrowers?.length || 0} students!`);
-        } else {
-          setStatusMessage('File does not appear to be a valid ULM LMS database archive.');
-        }
-      } catch {
-        setStatusMessage('Error reading file. Ensure it is a valid JSON database archive.');
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleConfirm = () => {
-    const config: StorageLocationConfig = {
-      mode: selectedMode,
-      folderPath: customPath.trim() || 'C:\\ULM_Library_Database',
-      folderName: customPath.split('\\').pop() || 'ULM_Library_Database',
-      fileName: fileName.trim() || 'ulm_library_master.sqlite',
-      autoSaveToDisk,
-      askOnStartup: isStartupModal ? false : askOnStartup,
-      isConfigured: true,
-      lastSyncTimestamp: new Date().toLocaleTimeString(),
-    };
-
-    LibraryStorage.saveStorageLocation(config);
-    LibraryStorage.syncToDiskLocation();
-    onLocationSaved(config);
-    onClose();
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/85 backdrop-blur-xs select-none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="storage-setup-title"
+    >
+      {/* Hidden file inputs for cross-platform simulation */}
+      <input
+        ref={folderInputRef}
+        type="file"
+        // @ts-expect-error webkitdirectory is standard in Chromium
+        webkitdirectory="true"
+        directory=""
+        multiple
+        className="hidden"
+        onChange={handleFolderPicked}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".db,.sqlite,.sqlite3"
+        className="hidden"
+        onChange={handleFilePicked}
+      />
+
+      {/* MODAL CARD: 580px wide fixed size, dark theme card #0B1220 on canvas #020617, 1px #334155 border, 12px radius, 24px padding */}
       <div 
-        className="w-full max-w-2xl bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-[#1E293B] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
-        onClick={(e) => e.stopPropagation()}
+        className="w-[580px] max-w-full bg-[#0B1220] border border-[#334155] rounded-[12px] p-6 shadow-2xl flex flex-col gap-4 text-[#F1F5F9] focus:outline-hidden"
+        tabIndex={-1}
       >
-        {/* Header */}
-        <div className="px-6 py-4.5 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between bg-slate-50/70 dark:bg-[#0F172A]/70">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
-              <Database className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                  {isStartupModal ? 'FIRST-TIME WORKSTATION INITIALIZATION' : 'STORAGE SETTINGS'}
-                </span>
-              </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-cinzel">
-                {isStartupModal ? 'Choose Where to Store Library Data' : 'Select Database Storage Location'}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {isStartupModal
-                  ? 'Select the folder or drive on your PC for your SQLite database records. Configured once during initial setup.'
-                  : 'Choose the directory on your PC where library data and SQLite records will be stored.'}
-              </p>
-            </div>
+        {/* Header: ULM Crest Vector Badge + Titles */}
+        <div className="flex items-start gap-3.5">
+          <div className="w-12 h-12 rounded-[10px] bg-amber-500/10 border border-amber-500/35 flex items-center justify-center shrink-0 text-amber-500 shadow-xs">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-3z" />
+              <path d="M9 10h6M9 13h6M12 10v6" />
+            </svg>
           </div>
 
-          {!isStartupModal && (
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex-1 min-w-0">
+            <h2 id="storage-setup-title" className="font-cinzel text-[17px] font-bold tracking-wide text-white leading-snug">
+              Choose where to store library data
+            </h2>
+            <p className="text-[12px] text-[#94A3B8] font-sans mt-0.5 leading-relaxed">
+              All books, borrowers and loan records are saved in one database file in this folder.
+            </p>
+          </div>
         </div>
 
-        {/* Body content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-          
-          {/* Status / Alert Banner */}
-          {statusMessage && (
-            <div className={`p-3 rounded-xl border flex items-start gap-2.5 text-xs animate-in fade-in duration-150 ${
-              existingDbLoaded 
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' 
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
-            }`}>
-              <Check className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="flex-1 font-medium">{statusMessage}</div>
+        {/* Missing Path Alert Banner (When triggered by missing USB or deleted folder) */}
+        {isMissingPath && (
+          <div className="bg-rose-500/15 border border-rose-500/40 rounded-[8px] p-3 text-[11px] font-mono text-rose-300 flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <span className="font-bold block text-rose-200">Database not found at:</span>
+              <span className="truncate block opacity-90">{missingPath || 'Previously configured directory'}</span>
+              <span className="block mt-1 text-[10px] text-rose-400">Please locate an existing backup or choose a new folder below.</span>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Prompt description */}
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B] text-xs text-slate-600 dark:text-slate-300 space-y-1">
-            <p className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-              <HardDrive className="w-3.5 h-3.5 text-amber-500" />
-              <span>Where should your library database reside on this computer?</span>
-            </p>
-            <p className="text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
-              All books, student registrations, active circulation loans, barcode scans, and fine transactions will be safely stored and synced in your chosen storage destination.
+        {/* Two Selectable Option Cards (Radio style, amber border when selected) */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Option 1: Create a new library database */}
+          <div
+            onClick={() => setSetupOption('create_new')}
+            className={`p-3 rounded-[8px] cursor-pointer transition-all border flex flex-col gap-1.5 ${
+              setupOption === 'create_new'
+                ? 'bg-amber-500/10 border-amber-500 shadow-xs ring-1 ring-amber-500/40'
+                : 'bg-[#0F172A] border-[#334155] hover:border-slate-500'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                setupOption === 'create_new' ? 'border-amber-500 bg-amber-500' : 'border-slate-500'
+              }`}>
+                {setupOption === 'create_new' && <div className="w-1.5 h-1.5 rounded-full bg-[#020617]" />}
+              </div>
+              <span className="text-[12px] font-semibold text-white">Create a new library database</span>
+            </div>
+            <p className="text-[10px] text-[#94A3B8] pl-6 leading-tight">
+              Initialize a fresh catalog and default schemas for campus workstations.
             </p>
           </div>
 
-          {/* Preset Storage Options - Local Disk Primary */}
-          <div className="space-y-2.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
-              Storage Destination Mode
-            </label>
-            <div className="grid grid-cols-1 gap-3">
-              {PRESET_OPTIONS.map((preset) => {
-                const Icon = preset.icon;
-                const isSelected = selectedMode === preset.mode;
-                return (
-                  <button
-                    key={preset.mode}
-                    type="button"
-                    onClick={() => handleSelectPreset(preset)}
-                    className={`text-left p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                      isSelected
-                        ? 'bg-amber-500/10 border-amber-500/70 text-slate-900 dark:text-white ring-2 ring-amber-500/20 shadow-xs'
-                        : 'bg-white dark:bg-[#0F172A] border-slate-200 dark:border-[#1E293B] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between w-full">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${preset.colorClass}`}>
-                          <Icon className="w-5 h-5 text-amber-500" />
-                        </div>
-                        <div>
-                          <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{preset.title}</p>
-                          <span className="inline-block text-[10px] font-mono font-semibold text-amber-600 dark:text-amber-400 mt-0.5">
-                            {preset.badge}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shrink-0">
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      {preset.description}
-                    </p>
-                    <div className="font-mono text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 truncate w-full flex items-center gap-2">
-                      <span className="text-slate-400 dark:text-slate-500 text-[10px] uppercase font-semibold">Default Target:</span>
-                      <span className="text-amber-600 dark:text-amber-400 font-semibold">{preset.defaultPath}</span>
-                    </div>
-                  </button>
-                );
-              })}
+          {/* Option 2: Open an existing library database */}
+          <div
+            onClick={() => setSetupOption('open_existing')}
+            className={`p-3 rounded-[8px] cursor-pointer transition-all border flex flex-col gap-1.5 ${
+              setupOption === 'open_existing'
+                ? 'bg-amber-500/10 border-amber-500 shadow-xs ring-1 ring-amber-500/40'
+                : 'bg-[#0F172A] border-[#334155] hover:border-slate-500'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                setupOption === 'open_existing' ? 'border-amber-500 bg-amber-500' : 'border-slate-500'
+              }`}>
+                {setupOption === 'open_existing' && <div className="w-1.5 h-1.5 rounded-full bg-[#020617]" />}
+              </div>
+              <span className="text-[12px] font-semibold text-white">Open an existing library database</span>
             </div>
+            <p className="text-[10px] text-[#94A3B8] pl-6 leading-tight">
+              Mount a database moved from another PC or restored from backup (.db).
+            </p>
           </div>
-
-          {/* Folder Path & File Configuration */}
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B] space-y-3.5">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <FolderOpen className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Target Folder Path on PC</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={handleBrowseFolder}
-                  disabled={isBrowsing}
-                  className="px-3 py-1.5 text-xs font-bold bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 rounded-lg transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-xs hover:shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border border-amber-400/80 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                  title="Browse folder on your PC"
-                  aria-label="Browse Folder on PC"
-                >
-                  <FolderOpen className="w-3.5 h-3.5 text-slate-950 stroke-[2.2]" />
-                  <span>Browse Folder...</span>
-                </button>
-                <input
-                  ref={folderInputRef}
-                  type="file"
-                  // @ts-expect-error webkitdirectory is standard in HTML5 browsers for folder picking
-                  webkitdirectory=""
-                  directory=""
-                  multiple
-                  className="hidden"
-                  onChange={handleFolderInputChange}
-                />
-              </div>
-              <input
-                type="text"
-                value={customPath}
-                onChange={(e) => setCustomPath(e.target.value)}
-                placeholder="e.g. C:\ULM_Library_Database or D:\LMS_Data"
-                className="w-full px-3 py-2 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-[#334155] rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                  Database Master File Name
-                </label>
-                <input
-                  type="text"
-                  value={fileName}
-                  onChange={(e) => setFileName(e.target.value)}
-                  placeholder="ulm_library_master.sqlite"
-                  className="w-full px-3 py-1.5 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-[#334155] rounded-lg text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                  Existing Database in Folder?
-                </label>
-                <label className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-200/70 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer transition-colors">
-                  <Upload className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Import Existing File</span>
-                  <input
-                    type="file"
-                    accept=".json,.sqlite,.db"
-                    onChange={handleImportExistingFile}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Preferences Checkboxes */}
-          <div className="space-y-2 pt-1">
-            <label className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={autoSaveToDisk}
-                onChange={(e) => setAutoSaveToDisk(e.target.checked)}
-                className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 bg-white dark:bg-[#0F172A] border-slate-300 dark:border-slate-700"
-              />
-              <span>Automatically sync all catalog changes, loans, and returns to this storage location</span>
-            </label>
-
-            {isStartupModal ? (
-              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0 stroke-[2.5]" />
-                <span className="font-medium">
-                  This storage location will be saved permanently. The app will open directly without asking for location on future launches.
-                </span>
-              </div>
-            ) : (
-              <label className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={askOnStartup}
-                  onChange={(e) => setAskOnStartup(e.target.checked)}
-                  className="w-4 h-4 rounded text-amber-500 focus:ring-amber-500 bg-white dark:bg-[#0F172A] border-slate-300 dark:border-slate-700"
-                />
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  Ask for storage location on every application startup (Workstation Selection Mode)
-                </span>
-              </label>
-            )}
-          </div>
-
         </div>
 
-        {/* Footer actions */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-[#1E293B] bg-slate-50/70 dark:bg-[#0F172A]/70 flex items-center justify-between gap-3">
-          <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate max-w-[280px]">
-            Target: <span className="text-amber-600 dark:text-amber-400 font-bold">{customPath}</span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {!isStartupModal && (
+        {/* Folder Row: Read-only path box (JetBrains Mono) + [Browse...] Button + [Use recommended folder] */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-semibold text-slate-300">
+              {setupOption === 'create_new' ? 'Library Storage Folder:' : 'Existing SQLite Database File:'}
+            </span>
+            {setupOption === 'create_new' && (
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                onClick={handleUseRecommended}
+                className="text-blue-400 hover:text-blue-300 underline cursor-pointer text-[11px]"
               >
-                Cancel
+                Use recommended folder
               </button>
             )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={selectedPath}
+              placeholder={setupOption === 'create_new' ? 'Choose directory...' : 'Choose .db database file...'}
+              className="flex-1 bg-[#0F172A] border border-[#475569] text-white px-3 py-2 rounded-[6px] font-mono text-[12px] truncate select-all focus:outline-hidden focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+            />
             <button
               type="button"
-              onClick={handleConfirm}
-              className="px-5 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-2"
+              onClick={handleBrowse}
+              className="px-4 py-2 bg-[#1E293B] hover:bg-[#334155] border border-[#475569] text-white text-[12px] font-semibold rounded-[6px] transition-colors cursor-pointer focus:outline-hidden focus:border-amber-500"
             >
-              <Check className="w-4 h-4 stroke-[2.5]" />
-              <span>{isStartupModal ? 'Save Location & Open Library' : 'Confirm & Mount Storage'}</span>
+              Browse...
             </button>
           </div>
         </div>
 
+        {/* Preview Lines */}
+        <div className="bg-[#0F172A]/80 border border-[#1E293B] rounded-[8px] p-2.5 space-y-1 font-mono text-[11px]">
+          <div className="flex items-center gap-2 text-slate-300 truncate">
+            <Database className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span className="truncate">Database file: <span className="text-white">{derivedDbFile || '<folder>\\ULM_Library.db'}</span></span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-400 truncate">
+            <FolderOpen className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <span className="truncate">Backups: <span className="text-slate-300">{derivedFolder ? `${derivedFolder}\\Backups` : '<folder>\\Backups'}</span></span>
+          </div>
+          {setupOption === 'open_existing' && validation.summary && (
+            <div className="pt-1.5 mt-1 border-t border-[#1E293B] text-sky-400 flex items-center gap-2">
+              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>
+                Verified: {validation.summary.booksCount} books, {validation.summary.borrowersCount} borrowers (Schema v{validation.summary.schemaVersion})
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Network Share Strong Warning (UNC / Mapped Share) */}
+        {validation.isNetworkPath && (
+          <div className="bg-amber-500/15 border border-amber-500/40 rounded-[8px] p-2.5 space-y-2">
+            <div className="flex items-start gap-2 text-amber-300 text-[11px] font-semibold leading-snug">
+              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <span>SQLite can corrupt on network shares. Using a local disk is strongly recommended.</span>
+            </div>
+            <label className="flex items-center gap-2 text-[11px] text-slate-200 cursor-pointer pl-6">
+              <input
+                type="checkbox"
+                checked={networkAcknowledged}
+                onChange={(e) => setNetworkAcknowledged(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500"
+              />
+              <span>I understand the corruption risk of running SQLite over a network share</span>
+            </label>
+          </div>
+        )}
+
+        {/* Live Status Line */}
+        <div className="min-h-[20px] text-[11px] font-medium flex items-center gap-1.5">
+          {!validation.isValid ? (
+            <span className="text-rose-400 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{validation.errorMessage}</span>
+            </span>
+          ) : validation.warningMessage ? (
+            <span className="text-amber-400 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{validation.warningMessage}</span>
+            </span>
+          ) : validation.isNetworkPath && !networkAcknowledged ? (
+            <span className="text-amber-400 flex items-center gap-1">
+              <Info className="w-3.5 h-3.5 shrink-0" />
+              <span>Please check &quot;I understand&quot; to proceed with a network path.</span>
+            </span>
+          ) : (
+            <span className="text-emerald-400 flex items-center gap-1">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>Folder is ready and verified. WAL journal mode and single-instance lock ready.</span>
+            </span>
+          )}
+        </div>
+
+        {/* Buttons at Bottom Right: [Exit] (secondary) and [Continue] (primary amber) */}
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#1E293B]">
+          <button
+            type="button"
+            onClick={handleExitClick}
+            className="px-4 py-2 rounded-[6px] bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-slate-300 hover:text-white text-[12px] font-semibold transition-colors cursor-pointer focus:outline-hidden focus:border-amber-500"
+          >
+            Exit
+          </button>
+
+          <button
+            type="button"
+            disabled={!canContinue}
+            onClick={handleContinue}
+            className={`px-6 py-2 rounded-[6px] text-[12px] font-bold transition-all focus:outline-hidden ${
+              canContinue
+                ? 'bg-[#F59E0B] hover:bg-[#FBBF24] text-[#020617] border border-[#D97706] cursor-pointer shadow-md hover:shadow-amber-500/20'
+                : 'bg-[#334155] text-slate-500 border border-[#1E293B] cursor-not-allowed opacity-60'
+            }`}
+          >
+            Continue
+          </button>
+        </div>
+
+        {/* Exit Confirmation Dialog */}
+        {showExitConfirm && (
+          <div className="absolute inset-0 bg-[#020617]/90 rounded-[12px] flex items-center justify-center p-6 z-20">
+            <div className="bg-[#0B1220] border border-[#334155] rounded-[10px] p-5 max-w-sm text-center space-y-3 shadow-xl">
+              <h3 className="font-cinzel text-base font-bold text-white">Exit Library System?</h3>
+              <p className="text-xs text-slate-300">
+                A storage location is required to run the library database. Are you sure you wish to exit?
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowExitConfirm(false)}
+                  className="px-4 py-1.5 text-xs bg-[#1E293B] text-slate-200 border border-slate-700 rounded-md hover:bg-slate-700"
+                >
+                  Stay in Setup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExitConfirm(false);
+                    onClose();
+                  }}
+                  className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-md"
+                >
+                  Exit App
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Minus, Square, X, Copy, Sparkles } from 'lucide-react';
+import { Minus, Square, X, Copy } from 'lucide-react';
 
 interface WindowsTitleBarProps {
   onMinimize?: () => void;
@@ -55,35 +55,15 @@ export const WindowsTitleBar: React.FC<WindowsTitleBarProps> = ({
   return (
     <>
       <header 
-        className="w-full flex items-center justify-between px-4 select-none z-50 shrink-0 relative transition-colors duration-150 border-b border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] h-10"
+        className="w-full flex items-center justify-between px-4 select-none z-50 shrink-0 relative transition-colors duration-150 border-b border-[var(--border)] bg-[var(--background)] text-[var(--text-primary)] h-11"
       >
         {/* Subtle accent hairline across top */}
         <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)]/40 to-transparent pointer-events-none" />
 
-        {/* Left Section: Institutional edition indicator */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 text-[var(--text-accent)]">
-            <Sparkles className="w-3.5 h-3.5 text-[var(--text-accent)]" />
-            <span className="text-[12px] font-mono tracking-wider uppercase font-semibold text-[var(--text-muted)] hidden lg:inline">
-              CAMPUS WORKSTATION
-            </span>
-          </div>
-
-          {onReplayOpeningAnimation && (
-            <button
-              onClick={onReplayOpeningAnimation}
-              title="Play App Opening Intro Animation"
-              className="flex items-center gap-1.5 px-2.5 h-6 rounded-[8px] bg-amber-500/10 hover:bg-amber-500/20 active:scale-[0.98] text-amber-700 dark:text-amber-400 border border-amber-500/25 text-[12px] font-mono font-medium transition-all duration-150 cursor-pointer"
-            >
-              <span>⚡ Boot Intro</span>
-            </button>
-          )}
-        </div>
-
-        {/* Center Section: Window Title with Cinzel font */}
-        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none text-center truncate max-w-[65%] flex items-center justify-center gap-2">
-          <span className="font-cinzel text-[14px] font-semibold tracking-wider whitespace-nowrap truncate text-[var(--text-primary)]">
-            {universityName} <span className="text-[var(--text-muted)] font-normal mx-1.5 font-sans">|</span> {libraryName}
+        {/* Center Section: Window Title with Cinzel font - Larger Text */}
+        <div className="flex-1 text-center truncate max-w-[85%] mx-auto flex items-center justify-center gap-2">
+          <span className="font-cinzel text-[16px] sm:text-[17px] font-bold tracking-wider whitespace-nowrap truncate text-[var(--text-primary)]">
+            {universityName} <span className="text-[var(--text-muted)] font-normal mx-2 font-sans text-[15px]">|</span> {libraryName}
           </span>
         </div>
 

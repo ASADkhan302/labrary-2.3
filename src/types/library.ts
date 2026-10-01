@@ -22,19 +22,38 @@ export interface Book {
   is_active: boolean;
 }
 
+export type BorrowerRole = 'Student' | 'Faculty' | 'Staff';
+export type BorrowerStatus = 'active' | 'suspended' | 'left';
+
 export interface Borrower {
   id: string;
+  role: BorrowerRole;
+  university_id: string;
+  barcode: string; // same as university_id
   name: string;
-  student_id: string;
+  father_name?: string; // Student only
   department: string;
-  program: string;
-  class_name: string;
-  phone: string;
-  email: string;
+  program: string; // e.g. BCS
+  session?: string; // e.g. FA23
+  semester?: number | null; // 1-8
+  designation?: string; // Faculty/Staff only
+  email?: string;
+  phone: string; // Pakistani format normalized 03XX-XXXXXXX
+  address?: string;
+  photo_path?: string;
   photo_url?: string;
+  borrow_limit: number; // Student 3, Faculty 10, Staff 5
+  joined_date: string;
+  valid_until?: string | null;
+  status: BorrowerStatus;
+  notes?: string;
   created_at: string;
   updated_at: string;
   is_active: boolean;
+
+  // Backward compatibility fields
+  student_id: string;
+  class_name?: string;
 }
 
 export interface Transaction {
