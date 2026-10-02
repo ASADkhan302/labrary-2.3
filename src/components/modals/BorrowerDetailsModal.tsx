@@ -100,7 +100,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
               <User className="w-4 h-4 text-amber-500" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white font-cinzel leading-tight">
+              <h3 className="text-base font-bold text-[#F1F5F9] font-cinzel leading-tight">
                 Institutional Member Detail Dossier
               </h3>
               <p className="text-[11px] font-mono text-slate-400">
@@ -110,7 +110,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1 rounded-md text-slate-400 hover:text-[#F1F5F9] hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -134,7 +134,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
 
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg font-bold text-white font-header truncate">
+                <h2 className="text-lg font-bold text-[#F1F5F9] font-header truncate">
                   {borrower.name}
                 </h2>
                 <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${
@@ -181,7 +181,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
           <div className="flex items-center gap-3 text-right">
             <div className="p-2.5 rounded-lg bg-[#0B1220] border border-[#334155]">
               <span className="text-[10px] font-mono text-slate-400 block uppercase">Quota Limit</span>
-              <span className="text-xs font-mono font-bold text-white">
+              <span className="text-xs font-mono font-bold text-[#F1F5F9]">
                 {activeLoans.length} / {borrower.borrow_limit} Books
               </span>
             </div>
@@ -258,7 +258,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
               {activeLoansWithFine.length === 0 ? (
                 <div className="p-8 rounded-xl bg-[#020617] border border-[#334155] text-center space-y-2">
                   <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                  <h4 className="text-sm font-bold text-white">No Active Borrowed Books</h4>
+                  <h4 className="text-sm font-bold text-[#F1F5F9]">No Active Borrowed Books</h4>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto">
                     Borrower account is in good standing with full circulation quota available.
                   </p>
@@ -276,7 +276,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
                     <div className="min-w-0 flex-1">
                       <button
                         onClick={() => onOpenBookDetails(loan.book_id)}
-                        className="font-bold text-sm text-white hover:text-amber-400 text-left block truncate transition-colors cursor-pointer"
+                        className="font-bold text-sm text-[#F1F5F9] hover:text-amber-400 text-left block truncate transition-colors cursor-pointer"
                       >
                         {loan.book_name}
                       </button>
@@ -330,7 +330,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
                     className="p-3 rounded-lg bg-[#020617] border border-[#334155] flex items-center justify-between text-xs text-slate-300 font-mono"
                   >
                     <div className="truncate mr-3">
-                      <span className="text-white font-medium block truncate">{loan.book_name}</span>
+                      <span className="text-[#F1F5F9] font-medium block truncate">{loan.book_name}</span>
                       <span className="text-[10px] text-slate-500">{loan.barcode} · Issued {loan.issue_date}</span>
                     </div>
                     <span className="text-[11px] text-emerald-400 shrink-0 font-semibold">
@@ -446,7 +446,7 @@ export const BorrowerDetailsModal: React.FC<BorrowerDetailsModalProps> = ({
               <button
                 type="button"
                 onClick={() => onIssueBook(borrower)}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-lg bg-[#2563EB] hover:bg-[#3B82F6] active:bg-[#1D4ED8] text-[#F1F5F9] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>Issue Book</span>

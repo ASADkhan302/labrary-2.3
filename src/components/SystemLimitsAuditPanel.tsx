@@ -263,7 +263,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
   const passedCount = auditItems.filter(i => i.passed).length;
 
   return (
-    <div className="bg-white dark:bg-[#0F172A] border-2 border-amber-500/40 rounded-2xl p-5 sm:p-6 shadow-md space-y-5 transition-colors">
+    <div className="bg-[#0F172A] border-2 border-amber-500/40 rounded-2xl p-5 sm:p-6 shadow-md space-y-5 transition-colors">
       {/* Header with Run Trigger */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-[#1E293B] pb-4">
         <div className="space-y-1">
@@ -276,7 +276,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
               Audit Status: {lastAuditTimestamp}
             </span>
           </div>
-          <h3 className="text-base sm:text-lg font-bold font-cinzel text-slate-900 dark:text-white flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-bold font-cinzel text-[#F1F5F9] flex items-center gap-2">
             <Activity className="w-5 h-5 text-amber-500" />
             <span>Subsystem Min/Max Limits & Boundary Invariant Audit</span>
           </h3>
@@ -289,7 +289,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
           <button
             onClick={handleRunFullAudit}
             disabled={isRunning}
-            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : ''}`} />
             <span>{isRunning ? 'Auditing Every Inch...' : 'Re-Run Live Diagnostic Audit'}</span>
@@ -309,7 +309,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155]">
           <p className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider">Invariants Audited</p>
-          <p className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-0.5">{auditItems.length}</p>
+          <p className="text-xl font-bold font-mono text-[#F1F5F9] mt-0.5">{auditItems.length}</p>
           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-1">
             <CheckCircle2 className="w-3 h-3" /> 100% Codebase Coverage
           </span>
@@ -368,7 +368,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
               onClick={() => setViewType('table')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                 viewType === 'table'
-                  ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-2xs border border-slate-200/80 dark:border-slate-700'
+                  ? 'bg-[#1E293B] text-[#F1F5F9] shadow-2xs border border-slate-200/80 dark:border-slate-700'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -379,7 +379,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
               onClick={() => setViewType('chart')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
                 viewType === 'chart'
-                  ? 'bg-white dark:bg-[#1E293B] text-amber-600 dark:text-amber-400 shadow-2xs border border-slate-200/80 dark:border-slate-700'
+                  ? 'bg-[#1E293B] text-amber-600 dark:text-amber-400 shadow-2xs border border-slate-200/80 dark:border-slate-700'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -396,7 +396,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
           <div className="bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-2.5">
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-bold text-[#F1F5F9] flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-amber-500" />
                   <span>Subsystem Invariants Verified & Coverage Chart</span>
                 </h4>
@@ -477,7 +477,7 @@ export const SystemLimitsAuditPanel: React.FC = () => {
               {filteredItems.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/60 dark:hover:bg-[#0F172A]/40 transition-colors">
                   <td className="py-3 px-3">
-                    <div className="font-sans font-bold text-slate-900 dark:text-white text-xs">
+                    <div className="font-sans font-bold text-[#F1F5F9] text-xs">
                       {item.name}
                     </div>
                     <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">

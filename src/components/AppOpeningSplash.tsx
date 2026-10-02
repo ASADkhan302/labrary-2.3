@@ -7,6 +7,8 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { playClickSound } from '../services/audio';
+import { StartScreenHeroDeco } from './decorative/StartScreenHeroDeco';
+import { BootSpinesDeco } from './decorative/BootSpinesDeco';
 
 interface AppOpeningSplashProps {
   onComplete: () => void;
@@ -166,10 +168,10 @@ export const AppOpeningSplash: React.FC<AppOpeningSplashProps> = ({ onComplete }
         className="relative z-10 max-w-md w-full px-6 flex flex-col items-center text-center space-y-6"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Crest container with glow localized strictly behind crest */}
+        {/* Crest container with 2D Hero decorations placed below content */}
         <div className="relative flex items-center justify-center">
-          {/* Subtle glow positioned strictly behind the crest */}
-          <div className="absolute w-28 h-28 rounded-full bg-blue-600/20 blur-xl pointer-events-none" />
+          {/* Start Screen Hero 2D Decorations (Crest draw, flipping page, motes, purple pulse) */}
+          <StartScreenHeroDeco />
 
           {/* a) University crest fades and scales from 0.9 to 1 (600ms) with a soft glow pulse */}
           <div 
@@ -184,7 +186,7 @@ export const AppOpeningSplash: React.FC<AppOpeningSplashProps> = ({ onComplete }
         </div>
 
         {/* b) Dark Scrim (rgba(2,6,23,0.6)) behind text areas so text is never over glow or gradient */}
-        <div className="w-full bg-[rgba(2,6,23,0.6)] backdrop-blur-xs p-5 rounded-2xl border border-slate-800/80 space-y-5">
+        <div className="w-full bg-[rgba(2,6,23,0.6)] backdrop-blur-xs p-5 rounded-2xl border border-slate-800/80 space-y-4">
           <div className="space-y-1">
             <div className="splash-step-1">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#93C5FD]/15 border border-[#93C5FD]/25 text-[#93C5FD] text-[12px] font-mono font-semibold uppercase tracking-wider">
@@ -201,6 +203,9 @@ export const AppOpeningSplash: React.FC<AppOpeningSplashProps> = ({ onComplete }
               Library Management System • Win32 Edition
             </p>
           </div>
+
+          {/* Boot Splash Book Spines: 7 spines sliding up and settling one by one */}
+          <BootSpinesDeco />
 
           {/* c & d) SQLite mounting status lines + Thin progress bar fills 0 to 100% */}
           <div className="w-full space-y-3 pt-1">

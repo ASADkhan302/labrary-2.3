@@ -5,16 +5,17 @@ import { Loader2, Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { playClickSound } from "@/services/audio"
+import { BookSpinesLoader } from "@/components/decorative/BookSpinesLoader"
 
 const buttonVariants = cva(
-  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] text-[14px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 active:scale-[0.97] active:duration-[80ms] disabled:pointer-events-none disabled:opacity-60 select-none cursor-pointer overflow-hidden",
+  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] text-[14px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 active:scale-[0.97] active:duration-[80ms] disabled:pointer-events-none disabled:text-[var(--text-muted)] disabled:bg-slate-900/60 select-none cursor-pointer overflow-hidden",
   {
     variants: {
       variant: {
         default:
-          "bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold border-none shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(37,99,235,0.28)]",
+          "bg-[#2563EB] hover:bg-[#3B82F6] active:bg-[#1D4ED8] text-[#F1F5F9] font-semibold border-none shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(37,99,235,0.28)]",
         primary:
-          "bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold border-none shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(37,99,235,0.28)]",
+          "bg-[#2563EB] hover:bg-[#3B82F6] active:bg-[#1D4ED8] text-[#F1F5F9] font-semibold border-none shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(37,99,235,0.28)]",
         secondary:
           "bg-transparent border border-[var(--border-control)] text-[var(--text-primary)] hover:bg-[var(--overlay-hover)]",
         outline:
@@ -137,7 +138,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading ? (
-          <span className="inline-flex items-center justify-center gap-2">
+          <span className="inline-flex items-center justify-center gap-1.5">
+            <BookSpinesLoader />
             <Loader2 className="w-4 h-4 animate-spin text-current" />
             <span className="text-[12px] font-medium">Processing...</span>
           </span>

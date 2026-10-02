@@ -24,10 +24,13 @@ import {
   ChevronDown,
   Hash,
   DollarSign,
-  Bookmark
+  Bookmark,
+  Calendar
 } from 'lucide-react';
 import { Book } from '../../types/library';
 import { LibraryStorage } from '../../services/storage';
+import CustomSelect from '../ui/CustomSelect';
+import { getTodayIso, formatDisplayDate, normalizeDateAdded } from '../../utils/dateUtils';
 
 interface AddEditBookModalProps {
   isOpen: boolean;
@@ -101,6 +104,9 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   const [bindingCode, setBindingCode] = useState<string>('01');
   const [isbn, setIsbn] = useState<string>('978-0-13-235088-4');
   const [sourceRemarks, setSourceRemarks] = useState<string>('University Purchase');
+  const [dateAdded, setDateAdded] = useState<string>(getTodayIso());
+  const [dateAddedRaw, setDateAddedRaw] = useState<string>(formatDisplayDate(getTodayIso()));
+  const [dateAddedError, setDateAddedError] = useState<string | null>(null);
 
   // Classification & Archival Coordinates
   const [category, setCategory] = useState<string>('Computer Science');
@@ -173,6 +179,9 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setRow(bookToEdit.row || 'A-1');
       setSection(bookToEdit.section || 'Main Stacks');
       setDeweyCallNumber(bookToEdit.dewey_call_number || '005.133 ULM');
+      const editDate = bookToEdit.date_added || (bookToEdit.created_at ? bookToEdit.created_at.split(' ')[0] : getTodayIso());
+      setDateAdded(editDate);
+      setDateAddedRaw(formatDisplayDate(editDate));
     } else {
       // New book: Suggest next accession number
       const maxAcc = allBooks.reduce((max, b) => {
@@ -197,6 +206,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
         bindingCode: string;
         source: string;
         category: string;
+        dateAdded: string;
       }> = {};
 
       if (lastEntryStr) {
@@ -222,6 +232,9 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setBindingCode(cachedValues.bindingCode || '01');
       setIsbn(`978-0-${String(nextAcc).slice(-4)}-101-2`);
       setSourceRemarks(cachedValues.source || 'University Purchase');
+      const initialDate = cachedValues.dateAdded || getTodayIso();
+      setDateAdded(initialDate);
+      setDateAddedRaw(formatDisplayDate(initialDate));
       setCategory(cachedValues.category || 'Computer Science');
       setDeweyCallNumber('005.133 ULM');
       setShelf('CS-Rack-01');
@@ -304,7 +317,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   };
 
   // Copy values from previous entry ("Same as above" / Ditto)
-  const handleDittoField = (field: 'author' | 'publisher' | 'place' | 'edition' | 'category' | 'source') => {
+  const handleDittoField = (field: 'author' | 'publisher' | 'place' | 'edition' | 'category' | 'source' | 'date_added') => {
     const allBooks = LibraryStorage.getBooks();
     if (allBooks.length > 0) {
       const last = allBooks[0];
@@ -313,6 +326,46 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       if (field === 'category' && last.category) setCategory(last.category);
       if (field === 'edition' && last.edition) setEdition(last.edition);
       if (field === 'source') setSourceRemarks('University Purchase');
+      if (field === 'date_added') {
+        const lastDate = last.date_added || (last.created_at ? last.created_at.split(' ')[0] : getTodayIso());
+        setDateAdded(lastDate);
+        setDateAddedRaw(formatDisplayDate(lastDate));
+        setDateAddedError(null);
+      }
+    }
+  };
+
+  const handleDatePick = (isoVal: string) => {
+    if (!isoVal) return;
+    setDateAdded(isoVal);
+    setDateAddedRaw(formatDisplayDate(isoVal));
+    const valRes = normalizeDateAdded(isoVal);
+    if (!valRes.valid) {
+      setDateAddedError(valRes.error || 'Invalid date');
+    } else {
+      setDateAddedError(null);
+    }
+  };
+
+  const handleDateTextChange = (text: string) => {
+    setDateAddedRaw(text);
+    const valRes = normalizeDateAdded(text);
+    if (valRes.valid && valRes.date) {
+      setDateAdded(valRes.date);
+      setDateAddedError(null);
+    } else {
+      setDateAddedError(valRes.error || 'Invalid date');
+    }
+  };
+
+  const handleDateBlur = () => {
+    const valRes = normalizeDateAdded(dateAddedRaw);
+    if (valRes.valid && valRes.date) {
+      setDateAdded(valRes.date);
+      setDateAddedRaw(formatDisplayDate(valRes.date));
+      setDateAddedError(null);
+    } else {
+      setDateAddedError(valRes.error || 'Invalid date. Must be real date between 1900 and today.');
     }
   };
 
@@ -372,6 +425,14 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       return;
     }
 
+    const dateRes = normalizeDateAdded(dateAddedRaw || dateAdded);
+    if (!dateRes.valid) {
+      setDateAddedError(dateRes.error || 'Date Added must be a valid date between 1900 and today.');
+      setErrorMessage(dateRes.error || 'Date Added must be a valid date between 1900 and today.');
+      setSaveState('idle');
+      return;
+    }
+
     setSaveState('loading');
 
     // Build payload conforming exactly to Book schema
@@ -393,6 +454,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       row: row.trim(),
       section: section.trim(),
       dewey_call_number: deweyCallNumber.trim(),
+      date_added: dateRes.date!,
     };
 
     // Cache common fields for fast successive ledger entry
@@ -404,7 +466,8 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
         binding,
         bindingCode,
         source: sourceRemarks,
-        category
+        category,
+        dateAdded: dateRes.date!
       }));
     } catch {
       // Ignore cache storage error
@@ -482,7 +545,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h3 className="font-cinzel text-base sm:text-lg font-bold tracking-wider text-white">
+                <h3 className="font-cinzel text-base sm:text-lg font-bold tracking-wider text-[#F1F5F9]">
                   {bookToEdit ? 'EDIT ACCESSION RECORD' : 'ACCESSION REGISTER · NEW VOLUME'}
                 </h3>
                 <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
@@ -517,7 +580,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-slate-400 hover:text-white transition-colors border border-[#1E293B] cursor-pointer"
+              className="p-1.5 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] text-slate-400 hover:text-[#F1F5F9] transition-colors border border-[#1E293B] cursor-pointer"
               aria-label="Close dialog"
             >
               <X className="w-5 h-5" />
@@ -645,7 +708,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                     value={bookName}
                     onChange={(e) => setBookName(e.target.value)}
                     placeholder="e.g. Introduction to Algorithms (Third Edition)"
-                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3.5 py-2.5 text-base font-semibold text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/25"
+                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3.5 py-2.5 text-base font-semibold text-[#F1F5F9] placeholder:text-slate-600 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/25"
                   />
                 </div>
               </div>
@@ -771,7 +834,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   </span>
                 </div>
                 <span className="text-[11px] font-mono text-slate-400">
-                  Tab 8 — 12 · Ledger Columns 8 to 12
+                  Tab 8 — 13 · Ledger Columns 8 to 13 (Physical & Acquisition)
                 </span>
               </div>
 
@@ -834,17 +897,18 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                     10. Binding & Binding Code
                   </label>
                   <div className="flex items-center gap-2">
-                    <select
-                      tabIndex={12}
-                      value={binding}
-                      onChange={(e) => setBinding(e.target.value)}
-                      className="flex-1 bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
-                    >
-                      <option value="HB">HB (Hard Bound)</option>
-                      <option value="SB">SB (Soft Bound / Paper)</option>
-                      <option value="Leather">Leather / Archival</option>
-                      <option value="Other">Other Format</option>
-                    </select>
+                    <div className="flex-1">
+                      <CustomSelect
+                        value={binding}
+                        onChange={(val) => setBinding(val)}
+                        options={[
+                          { value: 'HB', label: 'HB (Hard Bound)' },
+                          { value: 'SB', label: 'SB (Soft Bound / Paper)' },
+                          { value: 'Leather', label: 'Leather / Archival' },
+                          { value: 'Other', label: 'Other Format' }
+                        ]}
+                      />
+                    </div>
                     <input
                       type="text"
                       tabIndex={13}
@@ -859,10 +923,10 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                 </div>
 
                 {/* 11. ISBN (with gentle non-blocking validation) */}
-                <div className="md:col-span-6 space-y-1.5">
+                <div className="md:col-span-4 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-300">
-                      11. ISBN (ISBN-10 or 13)
+                      11. ISBN (10 or 13)
                     </label>
                     {isbnWarning && (
                       <span className="text-[10px] font-mono text-amber-400 flex items-center gap-1">
@@ -886,16 +950,16 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   {isDuplicateIsbn && (
                     <p className="text-[11px] text-amber-300 flex items-center gap-1">
                       <Info className="w-3 h-3 text-amber-400 shrink-0" />
-                      <span>Duplicate ISBN: Registering will record this item as another physical copy.</span>
+                      <span>Duplicate ISBN: recorded as copy.</span>
                     </p>
                   )}
                 </div>
 
                 {/* 12. Source / Remarks */}
-                <div className="md:col-span-6 space-y-1.5">
+                <div className="md:col-span-4 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-300">
-                      12. Source / Acquisition Remarks
+                      12. Source / Acquisition
                     </label>
                     <button
                       type="button"
@@ -911,9 +975,70 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                     tabIndex={15}
                     value={sourceRemarks}
                     onChange={(e) => setSourceRemarks(e.target.value)}
-                    placeholder="e.g. University Purchase, HEC Grant, Donation"
+                    placeholder="e.g. University Purchase, HEC Grant"
                     className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
                   />
+                </div>
+
+                {/* 13. Date Added (Acquisition Date) */}
+                <div className="md:col-span-4 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
+                      <span>13. Date Added</span>
+                      <span className="text-amber-400 text-[10px] font-mono">(DD-MMM-YYYY)</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleDittoField('date_added')}
+                      title="Clone Date Added from last entered book"
+                      className="text-[10px] font-mono text-amber-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-2.5 h-2.5" />
+                      <span>Same as Above</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        tabIndex={16}
+                        value={dateAddedRaw}
+                        onChange={(e) => handleDateTextChange(e.target.value)}
+                        onBlur={handleDateBlur}
+                        placeholder="02-Oct-2026"
+                        className={`w-full bg-[#020617] border rounded-lg px-3 py-2 text-xs sm:text-sm font-mono text-slate-200 focus:outline-none ${
+                          dateAddedError 
+                            ? 'border-rose-500 focus:border-rose-400 focus:ring-1 focus:ring-rose-500' 
+                            : 'border-[#334155] focus:border-amber-400'
+                        }`}
+                      />
+                    </div>
+                    {/* Visual date picker input */}
+                    <div className="relative shrink-0">
+                      <input
+                        type="date"
+                        max={getTodayIso()}
+                        min="1900-01-01"
+                        value={dateAdded}
+                        onChange={(e) => handleDatePick(e.target.value)}
+                        className="w-9 h-[36px] opacity-0 absolute inset-0 cursor-pointer z-10"
+                        title="Pick date from calendar"
+                      />
+                      <div className="w-9 h-[36px] rounded-lg bg-[#0F172A] border border-[#334155] flex items-center justify-center text-amber-400 hover:text-amber-300 hover:border-amber-400 transition-colors pointer-events-none">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                  {dateAddedError ? (
+                    <p className="text-[11px] text-rose-400 flex items-center gap-1 mt-0.5">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{dateAddedError}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-slate-500 font-mono truncate">
+                      {formatDisplayDate(dateAdded)} · Defaults to today, editable
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -945,16 +1070,12 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   <label className="text-xs font-semibold text-slate-300">
                     Academic Discipline / Category
                   </label>
-                  <select
-                    tabIndex={16}
+                  <CustomSelect
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
-                  >
-                    {CATEGORY_OPTIONS.map((c, i) => (
-                      <option key={i} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setCategory(val)}
+                    options={CATEGORY_OPTIONS.map((c) => ({ value: c, label: c }))}
+                    searchable
+                  />
                 </div>
 
                 {/* Dewey Decimal Call Number */}
@@ -1012,17 +1133,17 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setTotalQuantity(Math.max(1, totalQuantity - 1))}
-                        className="px-2.5 py-1 text-slate-400 hover:text-white hover:bg-[#1E293B] cursor-pointer"
+                        className="px-2.5 py-1 text-slate-400 hover:text-[#F1F5F9] hover:bg-[#1E293B] cursor-pointer"
                       >
                         -
                       </button>
-                      <span className="px-3 py-1 font-mono font-bold text-xs text-white">
+                      <span className="px-3 py-1 font-mono font-bold text-xs text-[#F1F5F9]">
                         {totalQuantity}
                       </span>
                       <button
                         type="button"
                         onClick={() => setTotalQuantity(totalQuantity + 1)}
-                        className="px-2.5 py-1 text-slate-400 hover:text-white hover:bg-[#1E293B] cursor-pointer"
+                        className="px-2.5 py-1 text-slate-400 hover:text-[#F1F5F9] hover:bg-[#1E293B] cursor-pointer"
                       >
                         +
                       </button>
@@ -1092,7 +1213,7 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                       value={tempUrl}
                       onChange={(e) => setTempUrl(e.target.value)}
                       placeholder="https://images.unsplash.com/..."
-                      className="flex-1 bg-[#020617] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-white font-mono"
+                      className="flex-1 bg-[#020617] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-[#F1F5F9] font-mono"
                     />
                     <button
                       type="button"

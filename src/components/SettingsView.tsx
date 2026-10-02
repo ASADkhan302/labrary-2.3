@@ -15,7 +15,8 @@ import {
   Copy,
   ArrowRightLeft,
   ShieldCheck,
-  Folder
+  Folder,
+  Trash2
 } from 'lucide-react';
 import { SystemSettings } from '../types/library';
 import { LibraryStorage } from '../services/storage';
@@ -124,9 +125,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <div className="max-w-[1280px] mx-auto space-y-6">
 
         {/* Top Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] flex items-center gap-2">
               <Settings className="w-5 h-5 text-amber-500" />
               <span>Campus System Preferences & Hardware Configuration</span>
             </h2>
@@ -168,9 +169,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {/* Workstation Diagnostics & Boot Animation Ceremony */}
         {onPlayBootAnimation && (
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs transition-colors flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs transition-colors flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-xs sm:text-sm font-bold text-[#F1F5F9] flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 <span>App Opening Animation Ceremony</span>
               </h3>
@@ -191,7 +192,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <form onSubmit={handleSave} className="space-y-6">
           {/* Institutional Information */}
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-5 shadow-2xs transition-colors">
+          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-5 shadow-2xs transition-colors">
             {/* Section Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-[#1E293B] pb-3.5">
               <div className="flex items-center gap-2.5">
@@ -199,7 +200,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <Building2 className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                  <h3 className="text-sm font-bold text-[#F1F5F9] leading-tight">
                     Institutional Identity & Campus Header Details
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -224,7 +225,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={formData.university_name}
                   onChange={(e) => setFormData({ ...formData, university_name: e.target.value })}
                   placeholder="e.g. University of Lakki Marwat"
-                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F1F5F9] focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
                 />
                 <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">
                   Displayed in native Windows title bar, top navigation header, and member ID cards.
@@ -240,7 +241,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={formData.library_name}
                   onChange={(e) => setFormData({ ...formData, library_name: e.target.value })}
                   placeholder="e.g. Central Campus Library"
-                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F1F5F9] focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
                 />
                 <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">
                   Displayed as primary library header, sidebar campus title, and circulation receipts.
@@ -256,7 +257,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={formData.campus_address}
                   onChange={(e) => setFormData({ ...formData, campus_address: e.target.value })}
                   placeholder="e.g. Main Campus, Bannu-Mianwali Road, Lakki Marwat, KPK, Pakistan"
-                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F1F5F9] focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
                 />
                 <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">
                   Printed on institutional circulation vouchers, export manifests, and overdue notices.
@@ -272,7 +273,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="e.g. +92-969-510015"
-                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F1F5F9] focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
                 />
                 <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">
                   Circulation desk helpline for book renewals and student queries.
@@ -288,7 +289,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="e.g. library@ulm.edu.pk"
-                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F1F5F9] focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
                 />
                 <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1">
                   Institutional contact address for inter-library loan requests.
@@ -303,7 +304,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <span>Live Title Bar &amp; Header Preview</span>
               </div>
               <div className="flex items-center gap-2 text-xs font-mono text-slate-800 dark:text-slate-200 truncate">
-                <span className="font-bold text-slate-900 dark:text-white font-cinzel">
+                <span className="font-bold text-[#F1F5F9] font-cinzel">
                   {formData.university_name.trim() || 'University of Lakki Marwat'}
                 </span>
                 <span className="text-amber-500/70 font-sans">|</span>
@@ -340,8 +341,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           {/* Hardware & Peripheral Scanner Settings */}
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-4 shadow-2xs transition-colors">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-[#1E293B] pb-3">
+          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-4 shadow-2xs transition-colors">
+            <div className="flex items-center gap-2 text-sm font-bold text-[#F1F5F9] border-b border-slate-200 dark:border-[#1E293B] pb-3">
               <Volume2 className="w-4 h-4 text-amber-500" />
               <span>Barcode Scanner & Peripherals</span>
             </div>
@@ -381,7 +382,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="text"
                   value={formData.station_id}
                   onChange={(e) => setFormData({ ...formData, station_id: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg px-3 py-2 text-xs font-mono text-[#F1F5F9] focus:outline-none focus:border-amber-500"
                 />
               </div>
 
@@ -397,9 +398,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           {/* Local SQLite Database Storage & Repository (%APPDATA%\ULM Library\config.ini) */}
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-4 shadow-2xs transition-colors">
+          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 space-y-4 shadow-2xs transition-colors">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3">
-              <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#F1F5F9]">
                 <HardDrive className="w-4 h-4 text-emerald-500" />
                 <span>Library Storage Repository (%APPDATA%\ULM Library\config.ini)</span>
               </div>
@@ -537,7 +538,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         onResetDemoData();
                         setConfirmReset(false);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-[#F1F5F9] text-xs font-bold transition-colors cursor-pointer"
                     >
                       Confirm Reset
                     </button>

@@ -65,7 +65,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-lg bg-white dark:bg-[#0F172A] border border-rose-200 dark:border-rose-900/60 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150 animate-delete-shake"
+        className="w-full max-w-lg bg-[#0F172A] border border-rose-200 dark:border-rose-900/60 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150 animate-delete-shake"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -75,7 +75,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
               <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
             </div>
             <div>
-              <h3 className="font-header text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              <h3 className="font-header text-sm sm:text-base font-bold text-[#F1F5F9]">
                 Delete Member / Student Record
               </h3>
               <p className="text-[11px] text-rose-600 dark:text-rose-400 font-mono-code font-normal">
@@ -86,7 +86,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-white/80 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -111,7 +111,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h4 className="font-header text-base font-bold text-slate-900 dark:text-white truncate">
+                <h4 className="font-header text-base font-bold text-[#F1F5F9] truncate">
                   {borrower.name}
                 </h4>
                 <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 shrink-0">
@@ -146,7 +146,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
               <div className="space-y-1.5 pl-7">
                 <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Books currently issued:</p>
                 {activeLoans.map(loan => (
-                  <div key={loan.id} className="flex items-center justify-between text-xs bg-white/70 dark:bg-black/30 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+                  <div key={loan.id} className="flex items-center justify-between text-xs bg-slate-900/60 dark:bg-black/40 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
                     <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 truncate mr-2">
                       <BookOpen className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                       <span className="truncate">{loan.book_name || 'Book Volume'}</span>
@@ -170,7 +170,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
                 <label 
                   className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                     !isPermanent 
-                      ? 'bg-amber-500/10 border-amber-500/40 text-slate-900 dark:text-white shadow-2xs' 
+                      ? 'bg-amber-500/10 border-amber-500/40 text-[#F1F5F9] shadow-2xs' 
                       : 'bg-slate-50 dark:bg-[#020617] border-slate-200 dark:border-[#1E293B] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
@@ -182,7 +182,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
                     className="mt-0.5 text-amber-500 focus:ring-amber-500"
                   />
                   <div className="space-y-0.5 flex-1 text-xs">
-                    <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+                    <div className="flex items-center gap-1.5 font-semibold text-[#F1F5F9]">
                       <Archive className="w-3.5 h-3.5 text-amber-500" />
                       <span>Deactivate & Archive Profile (Recommended)</span>
                     </div>
@@ -196,7 +196,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
                 <label 
                   className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                     isPermanent 
-                      ? 'bg-rose-500/10 border-rose-500/50 text-slate-900 dark:text-white shadow-2xs' 
+                      ? 'bg-rose-500/10 border-rose-500/50 text-[#F1F5F9] shadow-2xs' 
                       : 'bg-slate-50 dark:bg-[#020617] border-slate-200 dark:border-[#1E293B] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
@@ -234,7 +234,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
                     value={confirmInput}
                     onChange={(e) => setConfirmInput(e.target.value)}
                     placeholder="Type DELETE to confirm"
-                    className="w-full bg-white dark:bg-[#020617] border border-rose-300 dark:border-rose-900 rounded-lg px-3 py-1.5 text-xs font-mono-code text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:border-rose-500"
+                    className="w-full bg-[#020617] border border-rose-300 dark:border-rose-900 rounded-lg px-3 py-1.5 text-xs font-mono-code text-[#F1F5F9] placeholder:text-slate-400 focus:outline-hidden focus:border-rose-500"
                   />
                 </div>
               )}
@@ -259,7 +259,7 @@ export const DeleteBorrowerConfirmModal: React.FC<DeleteBorrowerConfirmModalProp
             className={`px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 tracking-wide transition-all cursor-pointer shadow-md ${
               hasActiveLoans || (isPermanent && confirmInput.trim().toUpperCase() !== 'DELETE')
                 ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-slate-300 dark:border-slate-700'
-                : 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-rose-600/30'
+                : 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-[#F1F5F9] shadow-rose-600/30'
             }`}
           >
             <Trash2 className="w-4 h-4" />

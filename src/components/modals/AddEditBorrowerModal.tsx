@@ -16,6 +16,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Borrower, BorrowerRole, BorrowerStatus } from '../../types/library';
+import CustomSelect from '../ui/CustomSelect';
 
 interface AddEditBorrowerModalProps {
   isOpen: boolean;
@@ -534,7 +535,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
               <UserPlus className="w-4 h-4 text-amber-500" />
             </div>
             <div>
-              <h2 id="borrower-dialog-title" className="text-base font-bold text-white font-cinzel leading-tight tracking-wide">
+              <h2 id="borrower-dialog-title" className="text-base font-bold text-[#F1F5F9] font-cinzel leading-tight tracking-wide">
                 {isEditMode ? 'Edit Library Borrower Profile' : 'Enroll Borrower (Add Person)'}
               </h2>
               <p className="text-[11px] text-slate-400 font-sans mt-0.5">
@@ -546,7 +547,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-[#F1F5F9] hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4 stroke-[2.5]" />
@@ -580,7 +581,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenExisting(duplicateError.existingId!)}
-                  className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-colors"
+                  className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-[#F1F5F9] font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-colors"
                 >
                   <span>Open Record</span>
                   <ExternalLink className="w-3 h-3" />
@@ -611,7 +612,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                   className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                     role === r
                       ? 'bg-amber-500 text-slate-950 shadow-md border border-amber-400'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      : 'text-slate-400 hover:text-[#F1F5F9] hover:bg-slate-800/60'
                   }`}
                 >
                   <UserCheck className="w-3.5 h-3.5" />
@@ -636,7 +637,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 value={universityId}
                 onChange={(e) => handleUniversityIdChange(e.target.value)}
                 placeholder="e.g. ULM-FA23-BCS-042"
-                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs font-mono text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
               />
               {idPatternWarning && (
                 <p className="text-[10px] text-amber-400/90 mt-1 leading-tight font-sans">
@@ -657,7 +658,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Muhammad Asad Khan"
-                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
               />
             </div>
           </div>
@@ -692,7 +693,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                     value={fatherName}
                     onChange={(e) => setFatherName(e.target.value)}
                     placeholder="e.g. Gulzar Ahmad"
-                    className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
@@ -712,7 +713,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                     value={program}
                     onChange={(e) => setProgram(e.target.value)}
                     placeholder="e.g. BCS, BS Physics, LLB"
-                    className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
@@ -732,7 +733,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                     value={session}
                     onChange={(e) => setSession(e.target.value)}
                     placeholder="e.g. FA23, SP24"
-                    className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-1.5 text-xs font-mono text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-1.5 text-xs font-mono text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
@@ -747,15 +748,12 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                       Same
                     </button>
                   </div>
-                  <select
+                  <CustomSelect
                     value={semester}
-                    onChange={(e) => setSemester(Number(e.target.value))}
-                    className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
-                      <option key={s} value={s}>Semester {s}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSemester(Number(val))}
+                    options={[1, 2, 3, 4, 5, 6, 7, 8].map(s => ({ value: s, label: `Semester ${s}` }))}
+                    compact
+                  />
                 </div>
               </div>
             </div>
@@ -781,15 +779,11 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 <label className="block text-xs font-medium text-slate-300 mb-1">
                   Designation Rank
                 </label>
-                <select
+                <CustomSelect
                   value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
-                  className="w-full bg-[#0B1220] border border-[#334155] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
-                >
-                  {FACULTY_STAFF_DESIGNATIONS.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setDesignation(val)}
+                  options={FACULTY_STAFF_DESIGNATIONS.map((d) => ({ value: d, label: d }))}
+                />
               </div>
             </div>
           )}
@@ -800,65 +794,27 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
               <label className="text-xs font-semibold text-slate-200 tracking-wide">
                 Department <span className="text-amber-500">*</span>
               </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => applySameAsAbove('department')}
-                  className="text-[10.5px] font-mono text-amber-400 hover:underline cursor-pointer"
-                >
-                  Same as above
-                </button>
-                <span>·</span>
-                <button
-                  type="button"
-                  onClick={() => setIsAddingNewDept(!isAddingNewDept)}
-                  className="text-[10.5px] text-sky-400 hover:underline cursor-pointer flex items-center gap-0.5"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>{isAddingNewDept ? 'Select Existing' : 'Add New Dept'}</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => applySameAsAbove('department')}
+                className="text-[10.5px] font-mono text-amber-400 hover:underline cursor-pointer"
+              >
+                Same as above
+              </button>
             </div>
 
-            {isAddingNewDept ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={customDept}
-                  onChange={(e) => {
-                    setCustomDept(e.target.value);
-                    setDepartment(e.target.value);
-                  }}
-                  placeholder="Type new department name..."
-                  className="flex-1 bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (customDept.trim()) {
-                      setDepartment(customDept.trim());
-                      setIsAddingNewDept(false);
-                    }
-                  }}
-                  className="px-3 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs cursor-pointer"
-                >
-                  Apply
-                </button>
-              </div>
-            ) : (
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
-              >
-                {DEFAULT_DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-                {customDept && !DEFAULT_DEPARTMENTS.includes(customDept) && (
-                  <option value={customDept}>{customDept}</option>
-                )}
-              </select>
-            )}
+            <CustomSelect
+              value={department}
+              onChange={(val) => setDepartment(val)}
+              options={Array.from(new Set([...DEFAULT_DEPARTMENTS, ...(customDept ? [customDept] : [])])).map((d) => ({ value: d, label: d }))}
+              searchable
+              allowAdd
+              onAddNew={(newDept) => {
+                setCustomDept(newDept);
+                setDepartment(newDept);
+              }}
+              addNewPlaceholder="Type new department name..."
+            />
           </div>
 
           {/* 3. Phone & Email Row */}
@@ -875,7 +831,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0300-1234567 or +92 300..."
-                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs font-mono text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
               />
             </div>
 
@@ -890,7 +846,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="member@ulm.edu.pk"
-                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+                className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
               />
             </div>
           </div>
@@ -914,7 +870,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="e.g. Hostels / Lakki Marwat Campus Address"
-              className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
+              className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs transition-colors"
             />
           </div>
 
@@ -931,7 +887,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 )}
               </div>
               <div>
-                <span className="text-xs font-bold text-white block">
+                <span className="text-xs font-bold text-[#F1F5F9] block">
                   Member Photo (Resized to 300 px)
                 </span>
                 <p className="text-[11px] text-slate-400 mt-0.5">
@@ -979,7 +935,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 type="date"
                 value={joinedDate}
                 onChange={(e) => setJoinedDate(e.target.value)}
-                className="w-full bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-1.5 text-xs text-[#F1F5F9] focus:outline-none focus:border-amber-500"
               />
             </div>
 
@@ -998,7 +954,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 type="date"
                 value={validUntil}
                 onChange={(e) => setValidUntil(e.target.value)}
-                className="w-full bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-1.5 text-xs text-[#F1F5F9] focus:outline-none focus:border-amber-500"
               />
             </div>
 
@@ -1019,7 +975,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 max={20}
                 value={borrowLimit}
                 onChange={(e) => setBorrowLimit(Number(e.target.value))}
-                className="w-full bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-amber-500"
+                className="w-full bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F1F5F9] focus:outline-none focus:border-amber-500"
               />
             </div>
 
@@ -1027,15 +983,16 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
               <label className="block text-[11px] font-semibold text-slate-300 mb-1">
                 Status
               </label>
-              <select
+              <CustomSelect
                 value={status}
-                onChange={(e) => setStatus(e.target.value as BorrowerStatus)}
-                className="w-full bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
-              >
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="left">Left</option>
-              </select>
+                onChange={(val) => setStatus(val as BorrowerStatus)}
+                options={[
+                  { value: 'active', label: 'Active', badge: 'Normal' },
+                  { value: 'suspended', label: 'Suspended', badge: 'Blocked' },
+                  { value: 'left', label: 'Left', badge: 'Archived' }
+                ]}
+                compact
+              />
             </div>
           </div>
 
@@ -1049,7 +1006,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Verified by HOD, special library clearance, or remarks..."
-              className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs"
+              className="w-full bg-[#020617] border border-[#334155] rounded-xl px-3.5 py-2 text-xs text-[#F1F5F9] placeholder:text-slate-500 focus:outline-none focus:border-amber-500 shadow-2xs"
             />
           </div>
 
@@ -1075,7 +1032,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
                 type="button"
                 onClick={() => handleSave(true)}
                 disabled={Boolean(duplicateError)}
-                className="px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                className="px-4 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
                 title="Save this record and keep role, department and class context ready for the next person"
               >
                 <span>Save &amp; Next</span>
@@ -1087,7 +1044,7 @@ export const AddEditBorrowerModal: React.FC<AddEditBorrowerModalProps> = ({
               type="button"
               onClick={() => handleSave(false)}
               disabled={Boolean(duplicateError)}
-              className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs shadow-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs shadow-md transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
               {isEditMode ? 'Save Changes' : 'Save & Close'}
             </button>

@@ -90,9 +90,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div className="max-w-[1920px] mx-auto space-y-6">
 
         {/* Top Header & Export Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-amber-500" />
               <span>Campus Library Analytics & Inventory Audit</span>
             </h2>
@@ -134,9 +134,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Breakdown 1: Books by Category */}
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs space-y-4 transition-colors">
+          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs space-y-4 transition-colors">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3">
-              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Holdings Distribution by Academic Discipline</h3>
+              <h3 className="text-xs sm:text-sm font-bold text-[#F1F5F9]">Holdings Distribution by Academic Discipline</h3>
               <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{totalCopies} physical copies</span>
             </div>
 
@@ -181,9 +181,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
 
           {/* Breakdown 2: Circulation by Department */}
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs space-y-4 transition-colors">
+          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs space-y-4 transition-colors">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3">
-              <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Active Borrowing by Department</h3>
+              <h3 className="text-xs sm:text-sm font-bold text-[#F1F5F9]">Active Borrowing by Department</h3>
               <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{totalIssued} active loans</span>
             </div>
 

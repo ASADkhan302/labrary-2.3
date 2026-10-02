@@ -106,9 +106,9 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
       <div className="max-w-[1280px] mx-auto space-y-6">
 
         {/* Top Header Card */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] flex items-center gap-2">
               <QrCode className="w-5 h-5 text-amber-500" />
               <span>Barcode Scanner & Hardware Station</span>
             </h2>
@@ -144,7 +144,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
         </div>
 
         {/* Scanner Laser Input Centerpiece */}
-        <div className={`bg-white dark:bg-[#0F172A] border-2 border-slate-200 dark:border-[#1E293B] focus-within:border-amber-500 rounded-2xl p-6 sm:p-8 shadow-sm relative overflow-hidden transition-all ${
+        <div className={`bg-[#0F172A] border-2 border-slate-200 dark:border-[#1E293B] focus-within:border-amber-500 rounded-2xl p-6 sm:p-8 shadow-sm relative overflow-hidden transition-all ${
           isScanSuccessFlash ? 'scan-flash-success' : ''
         }`}>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -157,8 +157,8 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
               </p>
             </div>
 
-            <div className="max-w-xl mx-auto relative flex items-center">
-              <BarcodeIcon className="w-5 h-5 text-slate-400 absolute left-4.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+            <div className="max-w-xl mx-auto flex items-center bg-[#020617] border-2 border-[#334155] focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/20 rounded-xl p-1.5 transition-all shadow-md barcode-scan-wrapper">
+              <BarcodeIcon className="w-5 h-5 text-amber-500/80 ml-3 shrink-0 pointer-events-none" />
               <input
                 ref={inputRef}
                 type="text"
@@ -170,14 +170,20 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                   }
                 }}
                 placeholder="[ Scan barcode or enter 13-digit number ]"
-                className="w-full h-13 bg-slate-50 dark:bg-[#020617] border-2 border-slate-200 dark:border-[#334155] rounded-xl !pl-13 !pr-32 text-center text-base sm:text-lg font-mono font-bold text-slate-900 dark:text-white tracking-widest focus:outline-none focus:border-amber-500 transition-colors shadow-2xs"
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  outline: 'none',
+                }}
+                className="flex-1 h-11 bg-transparent border-0 text-center text-base sm:text-lg font-mono font-bold text-[#F1F5F9] placeholder:text-slate-500 tracking-wider focus:outline-none focus:ring-0 px-3"
               />
               <button
                 type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-5 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-xs tracking-wide transition-all cursor-pointer z-10"
+                className="h-10 px-5 rounded-lg bg-amber-500 hover:bg-[#FBBF24] active:bg-[#D97706] text-[#020617] font-bold text-xs flex items-center gap-2 shadow-sm tracking-wide transition-all cursor-pointer shrink-0"
               >
-                <Search className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Search</span>
+                <Search className="w-3.5 h-3.5 text-[#020617] stroke-[2.5]" />
+                <span className="text-[#020617] font-bold text-xs">Search</span>
               </button>
             </div>
           </form>
@@ -205,7 +211,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
 
         {/* Scan Results: Found */}
         {scanState === 'FOUND' && foundBook && (
-          <div className="bg-white dark:bg-[#0F172A] border border-emerald-500/40 rounded-xl p-5 sm:p-6 shadow-2xs space-y-4 animate-in fade-in duration-150 transition-colors">
+          <div className="bg-[#0F172A] border border-emerald-500/40 rounded-xl p-5 sm:p-6 shadow-2xs space-y-4 animate-in fade-in duration-150 transition-colors">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#1E293B] pb-3">
               <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm sm:text-base">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -230,7 +236,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/80 z-10" />
                 <div className="relative z-0 text-[10px] space-y-1">
                   <span className="text-[8px] font-mono text-amber-600 dark:text-amber-400 font-bold">ULM PRESS</span>
-                  <p className="font-cinzel font-bold text-slate-800 dark:text-white line-clamp-3">{foundBook.book_name}</p>
+                  <p className="font-cinzel font-bold text-slate-800 dark:text-[#F1F5F9] line-clamp-3">{foundBook.book_name}</p>
                 </div>
                 <span className="relative z-0 text-[8.5px] font-mono text-slate-500 dark:text-slate-400">{foundBook.dewey_call_number}</span>
               </div>
@@ -243,7 +249,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                     <span>·</span>
                     <span className="font-mono">Dewey {foundBook.dewey_call_number}</span>
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-1">
+                  <h3 className="text-base sm:text-lg font-bold text-[#F1F5F9] mt-1">
                     {foundBook.book_name}
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -255,7 +261,7 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-50 dark:bg-[#020617] p-3 rounded-lg border border-slate-200 dark:border-[#1E293B]">
                   <div>
                     <span className="text-[10px] uppercase font-mono text-slate-500 dark:text-slate-400">Total Volumes</span>
-                    <p className="text-sm font-bold font-mono text-slate-900 dark:text-white mt-0.5">{foundBook.total_quantity}</p>
+                    <p className="text-sm font-bold font-mono text-[#F1F5F9] mt-0.5">{foundBook.total_quantity}</p>
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-mono text-slate-500 dark:text-slate-400">Available</span>
@@ -286,9 +292,9 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
                     </span>
                     <div className="space-y-1">
                       {activeLoans.map(loan => (
-                        <div key={loan.id} className="flex items-center justify-between text-xs bg-white dark:bg-[#020617] px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800">
+                        <div key={loan.id} className="flex items-center justify-between text-xs bg-[#020617] px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800">
                           <div>
-                            <span className="font-semibold text-slate-800 dark:text-white">{loan.borrower_name}</span>
+                            <span className="font-semibold text-slate-800 dark:text-[#F1F5F9]">{loan.borrower_name}</span>
                             <span className="text-slate-500 ml-2 font-mono">({loan.student_id})</span>
                           </div>
                           <div className="flex items-center gap-3">
@@ -352,13 +358,13 @@ export const BarcodeScannerView: React.FC<BarcodeScannerViewProps> = ({
 
         {/* Scan Results: Not Found */}
         {scanState === 'NOT_FOUND' && (
-          <div className="bg-white dark:bg-[#0F172A] border border-rose-300 dark:border-rose-500/40 rounded-xl p-6 shadow-2xs space-y-3 text-center animate-in fade-in duration-150 transition-colors">
+          <div className="bg-[#0F172A] border border-rose-300 dark:border-rose-500/40 rounded-xl p-6 shadow-2xs space-y-3 text-center animate-in fade-in duration-150 transition-colors">
             <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto">
               <XCircle className="w-5 h-5" />
             </div>
 
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Barcode Not Found in Catalog</h3>
+              <h3 className="text-sm sm:text-base font-bold text-[#F1F5F9]">Barcode Not Found in Catalog</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
                 No active book matches barcode <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{searchedBarcode}</span>. You can register this accession immediately.
               </p>

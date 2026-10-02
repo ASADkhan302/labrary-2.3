@@ -15,8 +15,10 @@ import { SqliteDataLayerView } from './components/SqliteDataLayerView';
 import { CppNativeView } from './components/CppNativeView';
 import { ExcelCenterView } from './components/ExcelCenterView';
 import { SettingsView } from './components/SettingsView';
+import { StateGalleryView } from './components/StateGalleryView';
 import { LmsSidebar } from './components/LmsSidebar';
 import { AppOpeningSplash } from './components/AppOpeningSplash';
+import { ToastSuccessDeco } from './components/decorative/ToastSuccessDeco';
 
 import { AddEditBookModal } from './components/modals/AddEditBookModal';
 import { BookDetailsModal } from './components/modals/BookDetailsModal';
@@ -26,7 +28,7 @@ import { DeleteBookConfirmModal } from './components/modals/DeleteBookConfirmMod
 import { DeleteBorrowerConfirmModal } from './components/modals/DeleteBorrowerConfirmModal';
 import { StorageLocationModal } from './components/modals/StorageLocationModal';
 
-import { Book, Borrower, Transaction, HistoryEntry, SystemSettings, NavigationTab, StorageLocationConfig } from './types/library';
+import { Book, Borrower, BorrowerStatus, Transaction, HistoryEntry, SystemSettings, NavigationTab, StorageLocationConfig } from './types/library';
 import { LibraryStorage } from './services/storage';
 import { playSuccessBarcodeBeep, playClickSound, playErrorBeep } from './services/audio';
 
@@ -548,6 +550,10 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'gallery' && (
+          <StateGalleryView />
+        )}
+
         {activeTab === 'settings' && (
           <SettingsView
             settings={settings}
@@ -669,7 +675,11 @@ export default function App() {
           }`}
         >
           <div className="px-4 py-3 text-[14px] flex items-center gap-3">
-            <span className={`w-2 h-2 rounded-full shrink-0 ${toastMessage.isError ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+            {toastMessage.isError ? (
+              <span className="w-2 h-2 rounded-full shrink-0 bg-rose-500" />
+            ) : (
+              <ToastSuccessDeco />
+            )}
             <span className="text-[var(--text-primary)] font-medium">{toastMessage.text}</span>
           </div>
           {/* Thin auto-dismiss countdown bar */}

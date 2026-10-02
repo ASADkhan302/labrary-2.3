@@ -264,7 +264,7 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
           </div>
 
           <div className="flex-1 min-w-0">
-            <h2 id="storage-setup-title" className="font-cinzel text-[17px] font-bold tracking-wide text-white leading-snug">
+            <h2 id="storage-setup-title" className="font-cinzel text-[17px] font-bold tracking-wide text-[#F1F5F9] leading-snug">
               Choose where to store library data
             </h2>
             <p className="text-[12px] text-[#94A3B8] font-sans mt-0.5 leading-relaxed">
@@ -302,7 +302,7 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
               }`}>
                 {setupOption === 'create_new' && <div className="w-1.5 h-1.5 rounded-full bg-[#020617]" />}
               </div>
-              <span className="text-[12px] font-semibold text-white">Create a new library database</span>
+              <span className="text-[12px] font-semibold text-[#F1F5F9]">Create a new library database</span>
             </div>
             <p className="text-[10px] text-[#94A3B8] pl-6 leading-tight">
               Initialize a fresh catalog and default schemas for campus workstations.
@@ -324,7 +324,7 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
               }`}>
                 {setupOption === 'open_existing' && <div className="w-1.5 h-1.5 rounded-full bg-[#020617]" />}
               </div>
-              <span className="text-[12px] font-semibold text-white">Open an existing library database</span>
+              <span className="text-[12px] font-semibold text-[#F1F5F9]">Open an existing library database</span>
             </div>
             <p className="text-[10px] text-[#94A3B8] pl-6 leading-tight">
               Mount a database moved from another PC or restored from backup (.db).
@@ -355,12 +355,12 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
               readOnly
               value={selectedPath}
               placeholder={setupOption === 'create_new' ? 'Choose directory...' : 'Choose .db database file...'}
-              className="flex-1 bg-[#0F172A] border border-[#475569] text-white px-3 py-2 rounded-[6px] font-mono text-[12px] truncate select-all focus:outline-hidden focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              className="flex-1 bg-[#0F172A] border border-[#475569] text-[#F1F5F9] px-3 py-2 rounded-[6px] font-mono text-[12px] truncate select-all focus:outline-hidden focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
             />
             <button
               type="button"
               onClick={handleBrowse}
-              className="px-4 py-2 bg-[#1E293B] hover:bg-[#334155] border border-[#475569] text-white text-[12px] font-semibold rounded-[6px] transition-colors cursor-pointer focus:outline-hidden focus:border-amber-500"
+              className="px-4 py-2 bg-[#1E293B] hover:bg-[#334155] border border-[#475569] text-[#F1F5F9] text-[12px] font-semibold rounded-[6px] transition-colors cursor-pointer focus:outline-hidden focus:border-amber-500"
             >
               Browse...
             </button>
@@ -371,7 +371,7 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
         <div className="bg-[#0F172A]/80 border border-[#1E293B] rounded-[8px] p-2.5 space-y-1 font-mono text-[11px]">
           <div className="flex items-center gap-2 text-slate-300 truncate">
             <Database className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="truncate">Database file: <span className="text-white">{derivedDbFile || '<folder>\\ULM_Library.db'}</span></span>
+            <span className="truncate">Database file: <span className="text-[#F1F5F9]">{derivedDbFile || '<folder>\\ULM_Library.db'}</span></span>
           </div>
           <div className="flex items-center gap-2 text-slate-400 truncate">
             <FolderOpen className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -436,7 +436,7 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
           <button
             type="button"
             onClick={handleExitClick}
-            className="px-4 py-2 rounded-[6px] bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-slate-300 hover:text-white text-[12px] font-semibold transition-colors cursor-pointer focus:outline-hidden focus:border-amber-500"
+            className="px-4 py-2 rounded-[6px] bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-slate-300 hover:text-[#F1F5F9] text-[12px] font-semibold transition-colors cursor-pointer focus:outline-hidden focus:border-amber-500"
           >
             Exit
           </button>
@@ -459,7 +459,7 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
         {showExitConfirm && (
           <div className="absolute inset-0 bg-[#020617]/90 rounded-[12px] flex items-center justify-center p-6 z-20">
             <div className="bg-[#0B1220] border border-[#334155] rounded-[10px] p-5 max-w-sm text-center space-y-3 shadow-xl">
-              <h3 className="font-cinzel text-base font-bold text-white">Exit Library System?</h3>
+              <h3 className="font-cinzel text-base font-bold text-[#F1F5F9]">Exit Library System?</h3>
               <p className="text-xs text-slate-300">
                 A storage location is required to run the library database. Are you sure you wish to exit?
               </p>
@@ -477,7 +477,7 @@ export const StorageLocationModal: React.FC<StorageLocationModalProps> = ({
                     setShowExitConfirm(false);
                     onClose();
                   }}
-                  className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-md"
+                  className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-500 text-[#F1F5F9] font-bold rounded-md"
                 >
                   Exit App
                 </button>

@@ -290,6 +290,9 @@ console.log('\n[SECTION 3] Borrowers & Member Identification Portrait Studio');
 // Test 3.1: Add Member with base64 portrait photo
 const sampleDataUrl = 'data:image/jpeg;base64,' + 'A'.repeat(500); // 500-byte test data URL
 const addMemberRes = LibraryStorage.addBorrower({
+  role: 'Student',
+  university_id: 'ULM-2026-TEST-999',
+  barcode: 'ULM-2026-TEST-999',
   student_id: 'ULM-2026-TEST-999',
   name: 'Farhan Ullah Khan',
   department: 'Computer Science',
@@ -297,6 +300,9 @@ const addMemberRes = LibraryStorage.addBorrower({
   class_name: 'Semester 8',
   phone: '+92 300 1234567',
   email: 'farhan.khan@ulm.edu.pk',
+  borrow_limit: 3,
+  joined_date: '2026-10-01',
+  status: 'active',
   photo_url: sampleDataUrl,
 });
 
@@ -312,6 +318,9 @@ assert(
 
 // Test 3.2: Duplicate Student ID rejection
 const duplicateMemberRes = LibraryStorage.addBorrower({
+  role: 'Student',
+  university_id: 'ULM-2026-TEST-999', // Duplicate ID
+  barcode: 'ULM-2026-TEST-999',
   student_id: 'ULM-2026-TEST-999', // Duplicate ID
   name: 'Duplicate Student Name',
   department: 'Mathematics',
@@ -319,6 +328,9 @@ const duplicateMemberRes = LibraryStorage.addBorrower({
   class_name: 'Semester 1',
   phone: '+92 300 0000000',
   email: 'dup@ulm.edu.pk',
+  borrow_limit: 3,
+  joined_date: '2026-10-01',
+  status: 'active',
 });
 
 assert(

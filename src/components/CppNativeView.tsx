@@ -773,7 +773,7 @@ export const CppNativeView: React.FC = () => {
               <Cpu className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] flex items-center gap-2">
                 <span>C++17 & Qt 6 Complete Architecture (All 5 Phases)</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   ALL PHASES 1-5 DELIVERED
@@ -803,7 +803,7 @@ export const CppNativeView: React.FC = () => {
               <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 1</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <span className="text-xs font-semibold text-white block mt-1">Core & DB Layer</span>
+            <span className="text-xs font-semibold text-[#F1F5F9] block mt-1">Core & DB Layer</span>
             <p className="text-[10px] text-slate-400 mt-0.5">Accession Register & FTS5</p>
           </div>
 
@@ -812,7 +812,7 @@ export const CppNativeView: React.FC = () => {
               <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 2</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <span className="text-xs font-semibold text-white block mt-1">CSV & Backup</span>
+            <span className="text-xs font-semibold text-[#F1F5F9] block mt-1">CSV & Backup</span>
             <p className="text-[10px] text-slate-400 mt-0.5">Wizard & VACUUM INTO</p>
           </div>
 
@@ -821,7 +821,7 @@ export const CppNativeView: React.FC = () => {
               <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 3</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <span className="text-xs font-semibold text-white block mt-1">Circulation & Audio</span>
+            <span className="text-xs font-semibold text-[#F1F5F9] block mt-1">Circulation & Audio</span>
             <p className="text-[10px] text-slate-400 mt-0.5">Scanner filter & PCM Audio</p>
           </div>
 
@@ -830,7 +830,7 @@ export const CppNativeView: React.FC = () => {
               <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 4</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <span className="text-xs font-semibold text-white block mt-1">Code-128 Labels</span>
+            <span className="text-xs font-semibold text-[#F1F5F9] block mt-1">Code-128 Labels</span>
             <p className="text-[10px] text-slate-400 mt-0.5">2.5×1.5" QPrinter Label</p>
           </div>
 
@@ -839,7 +839,7 @@ export const CppNativeView: React.FC = () => {
               <span className="text-[10px] font-mono-code text-amber-400 font-bold">PHASE 5</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <span className="text-xs font-semibold text-white block mt-1">Reports & Splash</span>
+            <span className="text-xs font-semibold text-[#F1F5F9] block mt-1">Reports & Splash</span>
             <p className="text-[10px] text-slate-400 mt-0.5">Qt Charts & 2.5s Boot</p>
           </div>
         </div>
@@ -883,7 +883,7 @@ export const CppNativeView: React.FC = () => {
             <div className="flex items-center justify-between px-4 py-3 bg-[#0F172A] border-b border-[#1E293B]">
               <div className="flex items-center gap-2 min-w-0">
                 <Code2 className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="font-mono-code text-xs font-bold text-white truncate">
+                <span className="font-mono-code text-xs font-bold text-[#F1F5F9] truncate">
                   {selectedFile.path}
                 </span>
                 <span className="text-[10px] text-slate-400 hidden sm:inline">

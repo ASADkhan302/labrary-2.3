@@ -17,6 +17,7 @@ export interface Book {
   row: string;
   section: string;
   dewey_call_number: string;
+  date_added?: string; // YYYY-MM-DD local date
   created_at: string;
   updated_at: string;
   is_active: boolean;
@@ -121,4 +122,5 @@ export type NavigationTab =
   | 'sqlite'
   | 'cpp_native'
   | 'excel'
+  | 'gallery'
   | 'settings';

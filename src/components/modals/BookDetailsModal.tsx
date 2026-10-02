@@ -11,9 +11,11 @@ import {
   User, 
   CheckCircle2, 
   AlertTriangle,
-  Trash2
+  Trash2,
+  Calendar
 } from 'lucide-react';
 import { Book, Transaction } from '../../types/library';
+import { formatDisplayDate } from '../../utils/dateUtils';
 
 interface BookDetailsModalProps {
   book: Book | null;
@@ -58,7 +60,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
   const renderBarcodeStrip = (code: string) => {
     return (
       <div 
-        className="barcode-container flex items-center gap-[2px] h-10 px-3 py-1 bg-white rounded border border-slate-300 select-none shadow-xs"
+        className="barcode-container flex items-center gap-[2px] h-10 px-3 py-1 bg-[#0F172A] rounded border border-slate-300 select-none shadow-xs"
         data-barcode-container="true"
       >
         {code.split('').map((char, idx) => {
@@ -82,7 +84,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-2xl bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-2xl bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -93,7 +95,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+            className="p-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-[#F1F5F9] transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -119,7 +121,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
               <div className="absolute left-0 top-0 bottom-0 w-2.5 bg-gradient-to-r from-amber-700/80 via-amber-400 to-amber-700/40 z-10 shadow" />
               <div className="relative z-0 text-[10px] space-y-1">
                 <span className="text-[9px] font-mono-code text-amber-300 font-bold uppercase">ULM PRESS</span>
-                <p data-preserve-white="true" className="font-header font-bold text-white text-xs leading-snug line-clamp-4">{book.book_name}</p>
+                <p data-preserve-white="true" className="font-header font-bold text-[#F1F5F9] text-xs leading-snug line-clamp-4">{book.book_name}</p>
               </div>
               <span className="relative z-0 text-[9px] font-mono-code text-slate-300">{book.dewey_call_number}</span>
             </div>
@@ -135,12 +137,12 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
                 </span>
               </div>
 
-              <h2 className="text-xl font-bold font-header text-slate-900 dark:text-white leading-snug">
+              <h2 className="text-xl font-bold font-header text-[#F1F5F9] leading-snug">
                 {book.book_name}
               </h2>
 
               <p className="text-xs text-slate-600 dark:text-slate-300">
-                Author: <span className="font-semibold text-slate-900 dark:text-white">{book.author}</span>
+                Author: <span className="font-semibold text-[#F1F5F9]">{book.author}</span>
               </p>
 
               {book.publisher && (
@@ -153,18 +155,25 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
               <div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B] text-xs">
                 <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
                 <span className="text-slate-500 dark:text-slate-400 font-medium">Stack Location:</span>
-                <span className="text-slate-900 dark:text-white font-mono-code font-semibold">{book.shelf} · Row {book.row} ({book.section})</span>
+                <span className="text-[#F1F5F9] font-mono-code font-semibold">{book.shelf} · Row {book.row} ({book.section})</span>
               </div>
 
-              {/* Dewey Call Number & ISBN */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              {/* Dewey Call Number, ISBN & Date Added */}
+              <div className="grid grid-cols-3 gap-2 text-xs">
                 <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B]">
                   <span className="text-[10px] uppercase font-mono-code text-slate-500 block">Dewey Class</span>
-                  <span className="font-mono-code font-bold text-amber-700 dark:text-amber-400">{book.dewey_call_number}</span>
+                  <span className="font-mono-code font-bold text-amber-700 dark:text-amber-400 truncate block">{book.dewey_call_number}</span>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B]">
                   <span className="text-[10px] uppercase font-mono-code text-slate-500 block">ISBN-13</span>
-                  <span className="font-mono-code text-slate-700 dark:text-slate-300">{book.isbn}</span>
+                  <span className="font-mono-code text-slate-700 dark:text-slate-300 truncate block">{book.isbn}</span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B]">
+                  <span className="text-[10px] uppercase font-mono-code text-slate-500 block">Date Added</span>
+                  <span className="font-mono-code text-amber-600 dark:text-amber-300 font-semibold truncate block flex items-center gap-1">
+                    <Calendar className="w-3 h-3 shrink-0" />
+                    {formatDisplayDate(book.date_added || book.created_at)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -175,7 +184,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
             <div className="space-y-1">
               <span className="text-[10px] uppercase font-mono-code text-slate-500 block">Scannable Barcode Identifier</span>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-mono-code font-bold text-slate-900 dark:text-white tracking-widest">{book.barcode}</span>
+                <span className="text-sm font-mono-code font-bold text-[#F1F5F9] tracking-widest">{book.barcode}</span>
                 {renderBarcodeStrip(book.barcode)}
               </div>
             </div>
@@ -183,7 +192,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <span className="text-[10px] uppercase font-mono-code text-slate-500 block">Total Stacks</span>
-                <span className="text-base font-mono-code font-bold text-slate-900 dark:text-white tabular-nums">{book.total_quantity}</span>
+                <span className="text-base font-mono-code font-bold text-[#F1F5F9] tabular-nums">{book.total_quantity}</span>
               </div>
               <div className="text-right">
                 <span className="text-[10px] uppercase font-mono-code text-slate-500 block">Available</span>
@@ -219,10 +228,10 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
             ) : (
               <div className="space-y-1.5">
                 {activeLoans.map(loan => (
-                  <div key={loan.id} className="flex items-center justify-between bg-white dark:bg-[#020617] p-2.5 rounded-lg border border-slate-200 dark:border-[#1E293B] text-xs">
+                  <div key={loan.id} className="flex items-center justify-between bg-[#020617] p-2.5 rounded-lg border border-slate-200 dark:border-[#1E293B] text-xs">
                     <div className="flex items-center gap-2">
                       <User className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="font-semibold text-slate-900 dark:text-white">{loan.borrower_name}</span>
+                      <span className="font-semibold text-[#F1F5F9]">{loan.borrower_name}</span>
                       <span className="font-mono-code text-slate-500 dark:text-slate-400">({loan.student_id})</span>
                     </div>
                     <div className="flex items-center gap-2.5">
@@ -246,14 +255,14 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onEdit(book)}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#1E293B] hover:bg-slate-100 dark:hover:bg-[#334155] text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-[#1E293B] hover:bg-slate-100 dark:hover:bg-[#334155] text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5" />
               <span>Edit Title</span>
             </button>
             <button
               onClick={() => onPrintBarcode(book)}
-              className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#1E293B] hover:bg-slate-100 dark:hover:bg-[#334155] text-amber-700 dark:text-amber-400 text-xs font-medium flex items-center gap-1.5 border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-[#1E293B] hover:bg-slate-100 dark:hover:bg-[#334155] text-amber-700 dark:text-amber-400 text-xs font-medium flex items-center gap-1.5 border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print Barcode</span>
@@ -261,7 +270,7 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
             {onDelete && (
               <button
                 onClick={() => onDelete(book)}
-                className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#1E293B] hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-medium flex items-center gap-1.5 border border-slate-200 dark:border-[#334155] hover:border-rose-300 dark:hover:border-rose-900 transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-[#1E293B] hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-medium flex items-center gap-1.5 border border-slate-200 dark:border-[#334155] hover:border-rose-300 dark:hover:border-rose-900 transition-colors cursor-pointer"
                 title="Delete or archive this book"
               >
                 <Trash2 className="w-3.5 h-3.5" />

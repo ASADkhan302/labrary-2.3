@@ -279,7 +279,7 @@ export const BorrowerCsvImportModal: React.FC<BorrowerCsvImportModalProps> = ({
               <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white font-cinzel leading-tight">
+              <h3 className="text-base font-bold text-[#F1F5F9] font-cinzel leading-tight">
                 Bulk Import Class Students &amp; Faculty (CSV)
               </h3>
               <p className="text-[11px] font-mono text-slate-400">
@@ -300,7 +300,7 @@ export const BorrowerCsvImportModal: React.FC<BorrowerCsvImportModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-[#F1F5F9] hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -320,7 +320,7 @@ export const BorrowerCsvImportModal: React.FC<BorrowerCsvImportModalProps> = ({
                 <Upload className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Select Whole-Class CSV File</h4>
+                <h4 className="text-sm font-bold text-[#F1F5F9]">Select Whole-Class CSV File</h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-md">
                   Upload an institutional CSV export containing enrolled students or department staff rosters.
                 </p>
@@ -344,7 +344,7 @@ export const BorrowerCsvImportModal: React.FC<BorrowerCsvImportModalProps> = ({
               <div className="flex items-center gap-3">
                 <FileSpreadsheet className="w-6 h-6 text-emerald-400 shrink-0" />
                 <div>
-                  <span className="text-xs font-bold text-white block">{csvFile.name}</span>
+                  <span className="text-xs font-bold text-[#F1F5F9] block">{csvFile.name}</span>
                   <span className="text-[11px] font-mono text-slate-400">
                     {rows.length} rows parsed · {headers.length} columns detected
                   </span>
@@ -413,7 +413,7 @@ export const BorrowerCsvImportModal: React.FC<BorrowerCsvImportModalProps> = ({
           {validationReports.length > 0 && (
             <div className="p-4 rounded-xl bg-[#020617] border border-[#334155] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white flex items-center gap-2 font-mono uppercase tracking-wide">
+                <span className="text-xs font-bold text-[#F1F5F9] flex items-center gap-2 font-mono uppercase tracking-wide">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
                   <span>Batch Pre-validation Report ({validationReports.length})</span>
                 </span>
@@ -507,7 +507,7 @@ export const BorrowerCsvImportModal: React.FC<BorrowerCsvImportModalProps> = ({
               type="button"
               onClick={handleStartImport}
               disabled={rows.length === 0 || hasFatalErrors || isImporting}
-              className="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-slate-950 font-bold text-xs shadow-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-slate-950 font-bold text-xs shadow-md transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Check className="w-4 h-4 stroke-[3]" />
               <span>Import {rows.length} Members</span>

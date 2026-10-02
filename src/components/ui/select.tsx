@@ -19,7 +19,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-[8px] border border-[var(--border-control)] bg-[var(--control-bg)] px-3 py-2 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-blue-500/25 disabled:cursor-not-allowed disabled:opacity-60 transition-colors [&>span]:line-clamp-1",
+      "flex h-10 w-full items-center justify-between rounded-[8px] border border-[var(--border-control)] bg-[var(--control-bg)] px-3 py-2 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-blue-500/25 disabled:cursor-not-allowed disabled:text-[var(--text-muted)] transition-colors [&>span]:line-clamp-1",
       className,
     )}
     {...props}
@@ -74,8 +74,13 @@ const SelectContent = React.forwardRef<
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
+      style={{
+        backgroundColor: 'var(--cream-100, #FBF3DF)',
+        color: 'var(--on-cream, #1C1917)',
+        borderColor: 'var(--cream-300, #E6D3A3)',
+      }}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[12px] border border-[var(--border)] bg-[var(--card)] text-[var(--text-primary)] shadow-[var(--shadow-modal)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[12px] border shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className,
@@ -86,7 +91,7 @@ const SelectContent = React.forwardRef<
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1",
+          "p-1.5",
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
         )}
@@ -105,7 +110,8 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn("py-1.5 pl-8 pr-2 text-[12px] font-semibold text-[var(--text-muted)]", className)}
+    style={{ color: 'var(--on-cream, #1C1917)' }}
+    className={cn("py-1.5 pl-8 pr-2 text-[12px] font-bold opacity-75", className)}
     {...props}
   />
 ))
@@ -117,15 +123,16 @@ const SelectItem = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
+    style={{ color: 'var(--on-cream, #1C1917)' }}
     className={cn(
-      "relative flex w-full cursor-pointer select-none items-center rounded-[6px] py-2 pl-8 pr-2 text-[14px] text-[var(--text-primary)] outline-none hover:bg-black/5 dark:hover:bg-white/[0.04] focus:bg-black/5 dark:focus:bg-white/[0.04] focus:text-[var(--text-primary)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors",
+      "relative flex w-full cursor-pointer select-none items-center rounded-[6px] py-2 pl-8 pr-2 text-[13px] font-semibold outline-none hover:bg-[#F2E6C4] focus:bg-[#F2E6C4] focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 data-[state=checked]:bg-[#F59E0B] data-[state=checked]:text-[#1C1917] data-[disabled]:pointer-events-none data-[disabled]:opacity-40 transition-colors",
       className,
     )}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4 text-[var(--text-accent)]" />
+        <Check className="h-4 w-4 text-[#1C1917] stroke-[2.5]" />
       </SelectPrimitive.ItemIndicator>
     </span>
 

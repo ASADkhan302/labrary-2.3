@@ -62,7 +62,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-md bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl shadow-xl overflow-hidden flex flex-col"
+        className="w-full max-w-md bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl shadow-xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}

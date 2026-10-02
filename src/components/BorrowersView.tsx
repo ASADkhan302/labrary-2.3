@@ -28,6 +28,8 @@ import AddEditBorrowerModal from './modals/AddEditBorrowerModal';
 import BorrowerDetailsModal from './modals/BorrowerDetailsModal';
 import MemberCardPrintModal from './modals/MemberCardPrintModal';
 import BorrowerCsvImportModal from './modals/BorrowerCsvImportModal';
+import CustomSelect from './ui/CustomSelect';
+import { EmptyStateBooksDeco } from './decorative/EmptyStateBooksDeco';
 
 interface BorrowersViewProps {
   borrowers: Borrower[];
@@ -172,13 +174,13 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
       <div className="max-w-[1920px] mx-auto space-y-5">
 
         {/* Top Header & Fast Entry Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
           <div>
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
                 <Users className="w-4 h-4" />
               </div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-cinzel leading-tight">
+              <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] font-cinzel leading-tight">
                 University Borrowers Directory
               </h2>
             </div>
@@ -220,7 +222,7 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
         </div>
 
         {/* Filter Chips Bar (Role, Department, Status) & Search */}
-        <div className="bg-white dark:bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs transition-colors">
+        <div className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs transition-colors">
           
           {/* Search Box */}
           <div className="relative flex-1 min-w-[260px]">
@@ -235,50 +237,49 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
           </div>
 
           {/* Filter Chips */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Role Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg px-2.5 py-1">
-              <span className="text-[10.5px] font-mono text-slate-400 font-semibold uppercase">Role:</span>
-              <select
+            <div className="w-36">
+              <CustomSelect
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as any)}
-                className="bg-transparent text-xs text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer"
-              >
-                <option value="All">All Roles</option>
-                <option value="Student">Student</option>
-                <option value="Faculty">Faculty</option>
-                <option value="Staff">Staff</option>
-              </select>
+                onChange={(val) => setSelectedRole(val)}
+                options={[
+                  { value: 'All', label: 'All Roles' },
+                  { value: 'Student', label: 'Student' },
+                  { value: 'Faculty', label: 'Faculty' },
+                  { value: 'Staff', label: 'Staff' }
+                ]}
+                compact
+              />
             </div>
 
             {/* Department Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg px-2.5 py-1">
-              <span className="text-[10.5px] font-mono text-slate-400 font-semibold uppercase">Dept:</span>
-              <select
+            <div className="w-44">
+              <CustomSelect
                 value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
-                className="bg-transparent text-xs text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer max-w-[150px] truncate"
-              >
-                <option value="ALL">All Departments</option>
-                {departments.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedDept(val)}
+                options={[
+                  { value: 'ALL', label: 'All Departments' },
+                  ...departments.map(d => ({ value: d, label: d }))
+                ]}
+                searchable
+                compact
+              />
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg px-2.5 py-1">
-              <span className="text-[10.5px] font-mono text-slate-400 font-semibold uppercase">Status:</span>
-              <select
+            <div className="w-36">
+              <CustomSelect
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as any)}
-                className="bg-transparent text-xs text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer"
-              >
-                <option value="All">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="left">Left</option>
-              </select>
+                onChange={(val) => setSelectedStatus(val)}
+                options={[
+                  { value: 'All', label: 'All Statuses' },
+                  { value: 'active', label: 'Active', badge: 'Normal' },
+                  { value: 'suspended', label: 'Suspended', badge: 'Blocked' },
+                  { value: 'left', label: 'Left', badge: 'Archived' }
+                ]}
+                compact
+              />
             </div>
 
             {/* View Mode Toggle: Table / Grid */}
@@ -288,7 +289,7 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
                 onClick={() => setViewMode('table')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'table'
-                    ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700'
+                    ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200 dark:border-slate-700'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
                 title="Switch to Directory Table View"
@@ -301,7 +302,7 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
                 onClick={() => setViewMode('grid')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'grid'
-                    ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-xs border border-slate-200 dark:border-slate-700'
+                    ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200 dark:border-slate-700'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
                 title="Switch to Card Grid View"
@@ -316,8 +317,11 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
 
         {/* Directory Listing */}
         {filteredBorrowers.length === 0 ? (
-          <div className="bg-white dark:bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-12 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-2xs">
-            <Users className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-600" />
+          <div className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-12 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-center gap-3">
+              <Users className="w-12 h-12 text-slate-400 dark:text-slate-600" />
+              <EmptyStateBooksDeco />
+            </div>
             <h4 className="text-base font-semibold text-slate-900 dark:text-slate-200 font-cinzel">No matching members found</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
               No registered members match your search criteria. Try clearing search keywords or department/status filters.
@@ -331,7 +335,7 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
           </div>
         ) : viewMode === 'table' ? (
           /* Table View */
-          <div className="bg-white dark:bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl overflow-hidden shadow-2xs">
+          <div className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl overflow-hidden shadow-2xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
                 <thead className="bg-slate-50 dark:bg-[#020617] text-slate-500 dark:text-slate-400 uppercase font-mono text-[10.5px] border-b border-slate-200 dark:border-[#334155]">
@@ -368,7 +372,7 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
                           <button
                             type="button"
                             onClick={() => handleOpenDetails(bor.id)}
-                            className="flex items-center gap-2.5 text-left text-slate-900 dark:text-white hover:text-amber-500 font-bold transition-colors cursor-pointer"
+                            className="flex items-center gap-2.5 text-left text-[#F1F5F9] hover:text-amber-500 font-bold transition-colors cursor-pointer"
                           >
                             {bor.photo_url || bor.photo_path ? (
                               <img
@@ -521,7 +525,7 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
               return (
                 <div
                   key={bor.id}
-                  className="bg-white dark:bg-[#0B1220] border border-slate-200 dark:border-[#334155] hover:border-amber-500/50 rounded-xl overflow-hidden shadow-2xs hover:shadow-md flex flex-col justify-between transition-all"
+                  className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] hover:border-amber-500/50 rounded-xl overflow-hidden shadow-2xs hover:shadow-md flex flex-col justify-between transition-all"
                 >
                   <div className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
@@ -540,7 +544,7 @@ ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5
                         <div className="min-w-0">
                           <h4 
                             onClick={() => handleOpenDetails(bor.id)}
-                            className="font-header text-sm font-bold text-slate-900 dark:text-white hover:text-amber-500 cursor-pointer truncate transition-colors"
+                            className="font-header text-sm font-bold text-[#F1F5F9] hover:text-amber-500 cursor-pointer truncate transition-colors"
                             title={bor.name}
                           >
                             {bor.name}

@@ -208,9 +208,9 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
       <div className="max-w-[1920px] mx-auto space-y-6">
 
         {/* Top Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span>Campus Excel Center & Cross-PC System Migration</span>
             </h2>
@@ -238,7 +238,7 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
                 </span>
                 <span className="text-xs font-mono text-slate-500 dark:text-slate-400">Zero-Loss Data Shifting</span>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold font-cinzel text-slate-900 dark:text-white tracking-wide">
+              <h3 className="text-lg sm:text-xl font-bold font-cinzel text-[#F1F5F9] tracking-wide">
                 Shift All Library Data to Another Computer or Workstation
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-3xl leading-relaxed">
@@ -260,7 +260,7 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
 
               <button
                 onClick={handleExportMasterJson}
-                className="py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                className="py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#F1F5F9] font-bold text-xs border border-slate-700 flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                 title="Download 100% complete SQLite database clone"
               >
                 <Database className="w-4 h-4 text-amber-400 stroke-[2.2]" />
@@ -271,11 +271,11 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
 
           {/* 3-Step Migration Guide Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2">
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0B1120]/80 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
+            <div className="p-4 rounded-xl bg-slate-900/60 dark:bg-[#0B1220] border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
               <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold font-mono text-xs flex items-center justify-center">
                 1
               </div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-[#F1F5F9] uppercase tracking-wider">
                 Step 1: Export from this PC
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -283,11 +283,11 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0B1120]/80 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
+            <div className="p-4 rounded-xl bg-slate-900/60 dark:bg-[#0B1220] border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
               <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold font-mono text-xs flex items-center justify-center">
                 2
               </div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-[#F1F5F9] uppercase tracking-wider">
                 Step 2: Open on New PC
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -295,11 +295,11 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0B1120]/80 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
+            <div className="p-4 rounded-xl bg-slate-900/60 dark:bg-[#0B1220] border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
               <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xs flex items-center justify-center">
                 3
               </div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-[#F1F5F9] uppercase tracking-wider">
                 Step 3: Instant Restoration
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -312,7 +312,7 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h4 className="text-sm font-bold text-[#F1F5F9] flex items-center gap-2">
                   <Upload className="w-4 h-4 text-emerald-500" />
                   <span>Ingest / Restore Master Package on this PC</span>
                 </h4>
@@ -329,7 +329,7 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
                   className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                     importMode === 'merge' 
                       ? 'bg-amber-500 text-slate-950 font-bold shadow-2xs' 
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-[#F1F5F9]'
                   }`}
                   title="Merge imported records with any existing records on this PC without overwriting unchanged data"
                 >
@@ -339,8 +339,8 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
                   onClick={() => setImportMode('overwrite')}
                   className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                     importMode === 'overwrite' 
-                      ? 'bg-rose-500 text-white font-bold shadow-2xs' 
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-rose-500 text-[#F1F5F9] font-bold shadow-2xs' 
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-[#F1F5F9]'
                   }`}
                   title="Complete Mirror Clone: Replace local storage on this computer with the exact data from the other PC"
                 >
@@ -393,12 +393,12 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
                   reader.readAsText(file);
                 }
               }}
-              className="border-2 border-dashed border-amber-500/40 hover:border-amber-500/80 bg-white/50 dark:bg-slate-950/40 rounded-xl p-5 sm:p-6 text-center cursor-pointer transition-all hover:bg-amber-500/5 group select-none"
+              className="border-2 border-dashed border-amber-500/40 hover:border-amber-500/80 bg-[#0B1220] hover:bg-[#0F172A] rounded-xl p-5 sm:p-6 text-center cursor-pointer transition-all group select-none"
             >
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
                 <HardDrive className="w-6 h-6 stroke-[1.8]" />
               </div>
-              <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+              <p className="text-xs sm:text-sm font-bold text-[#F1F5F9]">
                 Click to browse Master Migration file from USB or Computer
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono">
@@ -417,15 +417,15 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-emerald-200 dark:border-emerald-800 text-center font-mono">
                     <div className="p-1.5 rounded-lg bg-emerald-100/60 dark:bg-emerald-900/40">
                       <span className="block text-[10px] text-emerald-800 dark:text-emerald-300">Books Loaded</span>
-                      <span className="text-base font-bold text-emerald-950 dark:text-white">{migrationStats.books}</span>
+                      <span className="text-base font-bold text-emerald-950 dark:text-[#F1F5F9]">{migrationStats.books}</span>
                     </div>
                     <div className="p-1.5 rounded-lg bg-emerald-100/60 dark:bg-emerald-900/40">
                       <span className="block text-[10px] text-emerald-800 dark:text-emerald-300">Members Loaded</span>
-                      <span className="text-base font-bold text-emerald-950 dark:text-white">{migrationStats.borrowers}</span>
+                      <span className="text-base font-bold text-emerald-950 dark:text-[#F1F5F9]">{migrationStats.borrowers}</span>
                     </div>
                     <div className="p-1.5 rounded-lg bg-emerald-100/60 dark:bg-emerald-900/40">
                       <span className="block text-[10px] text-emerald-800 dark:text-emerald-300">Loans Restored</span>
-                      <span className="text-base font-bold text-emerald-950 dark:text-white">{migrationStats.transactions}</span>
+                      <span className="text-base font-bold text-emerald-950 dark:text-[#F1F5F9]">{migrationStats.transactions}</span>
                     </div>
                   </div>
                 )}
@@ -542,7 +542,7 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
                   }
                 }}
                 disabled={isProcessing}
-                className="min-w-[200px] px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white tracking-wide active:scale-95 hover:scale-[1.01]"
+                className="min-w-[200px] px-6 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-[#F1F5F9] tracking-wide active:scale-95 hover:scale-[1.01]"
               >
                 {isProcessing ? (
                   <>
@@ -550,7 +550,7 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
                     <span>Importing...</span>
                   </>
                 ) : isSuccessMorph ? (
-                  <span className="inline-flex items-center gap-1.5 text-white font-bold animate-in zoom-in-75 duration-200">
+                  <span className="inline-flex items-center gap-1.5 text-[#F1F5F9] font-bold animate-in zoom-in-75 duration-200">
                     <Check className="w-4 h-4 stroke-[3]" />
                     <span>Imported</span>
                   </span>
@@ -567,17 +567,17 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
 
         {/* 4 Dedicated Departmental Sheet Exports */}
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider font-cinzel">
+          <h3 className="text-sm font-bold text-[#F1F5F9] uppercase tracking-wider font-cinzel">
             Individual Departmental Spreadsheets
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
+            <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase font-mono text-amber-700 dark:text-amber-400">Books Catalog</span>
                   <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">Export Books & Copies</h4>
+                <h4 className="text-base font-bold text-[#F1F5F9] mt-1">Export Books & Copies</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Contains barcodes, ISBNs, shelf locations, total copies, and shelf availability.
                 </p>
@@ -591,13 +591,13 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
               </button>
             </div>
 
-            <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
+            <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase font-mono text-sky-700 dark:text-sky-400">Borrowers Roster</span>
                   <Users className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                 </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">Export Campus Members</h4>
+                <h4 className="text-base font-bold text-[#F1F5F9] mt-1">Export Campus Members</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Student IDs, departments, degree programs, campus emails, and contact records.
                 </p>
@@ -611,13 +611,13 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
               </button>
             </div>
 
-            <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
+            <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase font-mono text-purple-700 dark:text-purple-400">Circulation Desk</span>
                   <FileSpreadsheet className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">Export Circulation Ledger</h4>
+                <h4 className="text-base font-bold text-[#F1F5F9] mt-1">Export Circulation Ledger</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Complete log of checkouts, due dates, return timestamps, and overdue statuses.
                 </p>
@@ -631,13 +631,13 @@ TransactionID,Barcode,BookTitle,BorrowerName,StudentID,Action,IssueDate,DueDate,
               </button>
             </div>
 
-            <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
+            <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between space-y-3 transition-colors">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase font-mono text-emerald-700 dark:text-emerald-400">Audit History</span>
                   <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1">Export System Audit Trail</h4>
+                <h4 className="text-base font-bold text-[#F1F5F9] mt-1">Export System Audit Trail</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Complete operational audit trail with timestamps, workstation IDs, and actions.
                 </p>

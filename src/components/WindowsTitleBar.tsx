@@ -73,7 +73,7 @@ export const WindowsTitleBar: React.FC<WindowsTitleBarProps> = ({
             onClick={handleMinimize}
             title="Minimize"
             aria-label="Minimize"
-            className="h-10 w-11 flex items-center justify-center transition-colors duration-150 text-[var(--text-muted)] hover:bg-black/5 dark:hover:bg-white/[0.06] hover:text-[var(--text-primary)]"
+            className="h-10 w-11 flex items-center justify-center transition-colors duration-150 text-[var(--text-muted)] hover:bg-black/5 dark:hover:bg-[#1E293B] hover:text-[var(--text-primary)]"
           >
             <Minus className="w-3.5 h-3.5" />
           </button>
@@ -82,7 +82,7 @@ export const WindowsTitleBar: React.FC<WindowsTitleBarProps> = ({
             onClick={handleMaximize}
             title={isMaximized ? "Restore Down" : "Maximize"}
             aria-label={isMaximized ? "Restore Down" : "Maximize"}
-            className="h-10 w-11 flex items-center justify-center transition-colors duration-150 text-[var(--text-muted)] hover:bg-black/5 dark:hover:bg-white/[0.06] hover:text-[var(--text-primary)]"
+            className="h-10 w-11 flex items-center justify-center transition-colors duration-150 text-[var(--text-muted)] hover:bg-black/5 dark:hover:bg-[#1E293B] hover:text-[var(--text-primary)]"
           >
             {isMaximized ? (
               <Copy className="w-3 h-3 rotate-180" />
@@ -95,7 +95,7 @@ export const WindowsTitleBar: React.FC<WindowsTitleBarProps> = ({
             onClick={handleClose}
             title="Close"
             aria-label="Close"
-            className="h-10 w-12 flex items-center justify-center transition-colors duration-150 text-[var(--text-muted)] hover:bg-[#DC2626] hover:text-white"
+            className="h-10 w-12 flex items-center justify-center transition-colors duration-150 text-[var(--text-muted)] hover:bg-[#DC2626] hover:text-[#F1F5F9]"
           >
             <X className="w-3.5 h-3.5" />
           </button>

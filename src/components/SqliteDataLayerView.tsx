@@ -56,14 +56,14 @@ export const SqliteDataLayerView: React.FC = () => {
       <div className="max-w-[1920px] mx-auto space-y-6">
 
         {/* Top Status Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">SQLite 3.45.1 Embedded Storage Layer</h2>
+                <h2 className="text-base font-bold text-[#F1F5F9]">SQLite 3.45.1 Embedded Storage Layer</h2>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                   WAL ACTIVE
                 </span>
@@ -86,7 +86,7 @@ export const SqliteDataLayerView: React.FC = () => {
         </div>
 
         {/* Database Tables Tabs & Preset Queries */}
-        <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 space-y-3.5 shadow-2xs transition-colors">
+        <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 space-y-3.5 shadow-2xs transition-colors">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-[#1E293B] pb-3">
             {/* Table Selectors */}
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -138,7 +138,7 @@ export const SqliteDataLayerView: React.FC = () => {
         </div>
 
         {/* Interactive SQL Terminal Console */}
-        <div className="bg-white dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-2xs transition-colors">
+        <div className="bg-[#020617] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-2xs transition-colors">
           <div className="bg-slate-50 dark:bg-[#0F172A] px-4 py-2.5 border-b border-slate-200 dark:border-[#1E293B] flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-mono-code text-slate-700 dark:text-slate-300 font-semibold">
               <Terminal className="w-3.5 h-3.5 text-amber-500" />

@@ -18,6 +18,7 @@ import {
   Check
 } from 'lucide-react';
 import { Transaction, Book, Borrower } from '../types/library';
+import CustomSelect from './ui/CustomSelect';
 
 interface CirculationDeskProps {
   transactions: Transaction[];
@@ -142,9 +143,9 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
       <div className="max-w-[1920px] mx-auto space-y-6">
 
         {/* Header & Quick Issue Toggle */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] flex items-center gap-2">
               <ArrowRightLeft className="w-5 h-5 text-amber-500" />
               <span>Circulation Desk & Loan Registry</span>
             </h2>
@@ -169,10 +170,10 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
         {isIssuing && (
           <form 
             onSubmit={handleCreateIssue}
-            className="bg-white dark:bg-[#020617] border border-amber-500/40 rounded-xl p-5 sm:p-6 shadow-sm space-y-4 animate-in fade-in duration-150"
+            className="bg-[#020617] border border-amber-500/40 rounded-xl p-5 sm:p-6 shadow-sm space-y-4 animate-in fade-in duration-150"
           >
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3">
-              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-semibold text-sm">
+              <div className="flex items-center gap-2 text-[#F1F5F9] font-semibold text-sm">
                 <BookOpen className="w-4 h-4 text-amber-500" />
                 <span>New Book Issue Transaction</span>
               </div>
@@ -208,18 +209,18 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 tracking-wide">
                   Select Book Title (Available Stock) <span className="text-amber-500">*</span>
                 </label>
-                <select
+                <CustomSelect
                   value={selectedBookId}
-                  onChange={(e) => setSelectedBookId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs"
-                >
-                  <option value="">-- Choose Book from Stacks --</option>
-                  {availableBooks.map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.book_name} ({b.available_quantity} available · {b.barcode})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedBookId(val)}
+                  placeholder="-- Choose Book from Stacks --"
+                  options={availableBooks.map(b => ({
+                    value: b.id,
+                    label: b.book_name,
+                    sublabel: `${b.barcode} · ${b.author}`,
+                    badge: `${b.available_quantity} Avail`
+                  }))}
+                  searchable
+                />
               </div>
 
               {/* Select Borrower */}
@@ -227,18 +228,18 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 tracking-wide">
                   Select Borrower (Member) <span className="text-amber-500">*</span>
                 </label>
-                <select
+                <CustomSelect
                   value={selectedBorrowerId}
-                  onChange={(e) => setSelectedBorrowerId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs"
-                >
-                  <option value="">-- Choose Member / Student ID --</option>
-                  {activeBorrowers.map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.student_id} · {b.department})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedBorrowerId(val)}
+                  placeholder="-- Choose Member / University ID --"
+                  options={activeBorrowers.map(b => ({
+                    value: b.id,
+                    label: b.name,
+                    sublabel: `${b.university_id || b.student_id} · ${b.department}`,
+                    badge: b.role || 'Member'
+                  }))}
+                  searchable
+                />
               </div>
 
               {/* Loan Period */}
@@ -246,16 +247,16 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 tracking-wide">
                   Loan Period Duration
                 </label>
-                <select
+                <CustomSelect
                   value={loanPeriodDays}
-                  onChange={(e) => setLoanPeriodDays(parseInt(e.target.value, 10))}
-                  className="w-full bg-slate-50 dark:bg-[#0F172A] border border-slate-200 dark:border-[#334155] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 shadow-2xs"
-                >
-                  <option value={7}>7 Days (Course Reserve)</option>
-                  <option value={14}>14 Days (Standard Undergraduate Loan)</option>
-                  <option value={30}>30 Days (Faculty / Research Loan)</option>
-                  <option value={60}>60 Days (Semester Extended Grant)</option>
-                </select>
+                  onChange={(val) => setLoanPeriodDays(Number(val))}
+                  options={[
+                    { value: 7, label: '7 Days (Course Reserve)' },
+                    { value: 14, label: '14 Days (Standard Undergraduate Loan)' },
+                    { value: 30, label: '30 Days (Faculty / Research Loan)' },
+                    { value: 60, label: '60 Days (Semester Extended Grant)' }
+                  ]}
+                />
               </div>
             </div>
 
@@ -291,7 +292,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
         )}
 
         {/* Filter Bar */}
-        <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs transition-colors">
+        <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs transition-colors">
           {/* Search Input */}
           <div className="relative flex-1 min-w-[240px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -320,7 +321,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
               onClick={() => setStatusFilter('ALL')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 statusFilter === 'ALL' 
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs font-semibold' 
+                  ? 'bg-slate-800 text-[#F1F5F9] shadow-2xs font-semibold' 
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -330,7 +331,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
               onClick={() => setStatusFilter('ACTIVE')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 statusFilter === 'ACTIVE' 
-                  ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-2xs font-semibold' 
+                  ? 'bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-2xs font-semibold' 
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -340,7 +341,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
               onClick={() => setStatusFilter('OVERDUE')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 statusFilter === 'OVERDUE' 
-                  ? 'bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-400 shadow-2xs font-semibold' 
+                  ? 'bg-slate-800 text-rose-700 dark:text-rose-400 shadow-2xs font-semibold' 
                   : 'text-slate-500 hover:text-rose-600 dark:hover:text-rose-400'
               }`}
             >
@@ -350,7 +351,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
               onClick={() => setStatusFilter('RETURNED')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 statusFilter === 'RETURNED' 
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs font-semibold' 
+                  ? 'bg-slate-800 text-[#F1F5F9] shadow-2xs font-semibold' 
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -365,7 +366,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
               onClick={() => setViewMode('grid')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'grid' 
-                  ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700' 
+                  ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200/80 dark:border-slate-700' 
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
               title="Switch to Card Grid View"
@@ -379,7 +380,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
               onClick={() => setViewMode('list')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'list' 
-                  ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700' 
+                  ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200/80 dark:border-slate-700' 
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
               title="Switch to Table List View"
@@ -393,7 +394,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
 
         {/* Transactions Display: Grid View or Table View */}
         {filteredTxs.length === 0 ? (
-          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-12 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-2xs">
+          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-12 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-2xs">
             <ArrowRightLeft className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-600" />
             <h4 className="text-base font-semibold text-slate-900 dark:text-slate-200">No circulation records found</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
@@ -416,7 +417,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
               return (
                 <div
                   key={tx.id}
-                  className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] hover:border-slate-300 dark:hover:border-slate-700 rounded-xl overflow-hidden shadow-2xs hover:shadow-md flex flex-col justify-between group transition-all duration-200"
+                  className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] hover:border-slate-300 dark:hover:border-slate-700 rounded-xl overflow-hidden shadow-2xs hover:shadow-md flex flex-col justify-between group transition-all duration-200"
                 >
                   <div className="p-4 space-y-3">
                     {/* Header: Transaction ID + Status Pill */}
@@ -445,7 +446,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                     <div>
                       <h4
                         onClick={() => onOpenBookDetails(tx.book_id)}
-                        className="font-header text-sm font-bold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors line-clamp-2 leading-snug"
+                        className="font-header text-sm font-bold text-[#F1F5F9] hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors line-clamp-2 leading-snug"
                         title={tx.book_name}
                       >
                         {tx.book_name || 'Book title'}
@@ -523,7 +524,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
           </div>
         ) : (
           /* Table View */
-        <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-2xs">
+        <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-50 dark:bg-[#020617] text-slate-500 dark:text-slate-400 uppercase font-mono text-[10.5px] border-b border-slate-200 dark:border-[#1E293B]">
@@ -557,7 +558,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                         <td className="py-3 px-4">
                           <button
                             onClick={() => onOpenBookDetails(tx.book_id)}
-                            className="font-semibold text-slate-900 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-left flex items-center gap-1.5 max-w-sm truncate"
+                            className="font-semibold text-[#F1F5F9] hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-left flex items-center gap-1.5 max-w-sm truncate"
                           >
                             <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span className="truncate">{tx.book_name || 'Book record'}</span>
