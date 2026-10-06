@@ -18,6 +18,21 @@ export interface Book {
   section: string;
   dewey_call_number: string;
   date_added?: string; // YYYY-MM-DD local date
+  title_roman?: string;
+  author_roman?: string;
+  title_sort?: string;
+  author_sort?: string;
+  search_text?: string;
+  accession_no?: string;
+  place?: string;
+  pages?: number;
+  price?: number;
+  binding?: string;
+  source_remarks?: string;
+  import_batch_id?: string;
+  imported_at?: string;
+  sheet_write_state?: 'waiting' | 'written' | 'failed';
+  sheet_write_error?: string;
   created_at: string;
   updated_at: string;
   is_active: boolean;
@@ -98,6 +113,34 @@ export interface SystemSettings {
   wal_mode: boolean;
   station_id: string;
   fine_per_day_pkr?: number;
+  barcode_prefix?: string; // Default 'ULM', max 6 alphanumeric characters
+  first_accession_number?: number; // Default 1
+}
+
+export interface LinkedSheetInfo {
+  id: string;
+  sheetName: string;
+  sheetPath: string;
+  isConnected: boolean;
+  lastSynced: string | null;
+  rowsRead: number;
+  booksAdded: number;
+  booksWaiting: number;
+  lastWriteResult: string | null;
+  isCloudFolder?: boolean;
+  cloudProviderName?: string;
+  storageKey?: string;
+}
+
+export interface ImportBatchRecord {
+  id: string;
+  filename: string;
+  imported_at: string;
+  total_rows: number;
+  imported_count: number;
+  skipped_count: number;
+  warnings_count: number;
+  book_ids: string[];
 }
 
 export type StorageMode = 'LOCAL_DISK' | 'USB_REMOVABLE' | 'NETWORK_SHARE' | 'BROWSER_SANDBOX';
@@ -119,8 +162,5 @@ export type NavigationTab =
   | 'borrowers'
   | 'reports'
   | 'scanner'
-  | 'sqlite'
-  | 'cpp_native'
   | 'excel'
-  | 'gallery'
   | 'settings';

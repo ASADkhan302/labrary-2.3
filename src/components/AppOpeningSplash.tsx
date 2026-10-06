@@ -9,6 +9,7 @@ import {
 import { playClickSound } from '../services/audio';
 import { StartScreenHeroDeco } from './decorative/StartScreenHeroDeco';
 import { BootSpinesDeco } from './decorative/BootSpinesDeco';
+import { ULM_CREST_SRC } from '../assets/brand/crestData';
 
 interface AppOpeningSplashProps {
   onComplete: () => void;
@@ -175,13 +176,19 @@ export const AppOpeningSplash: React.FC<AppOpeningSplashProps> = ({ onComplete }
 
           {/* a) University crest fades and scales from 0.9 to 1 (600ms) with a soft glow pulse */}
           <div 
-            className="w-20 h-20 rounded-[16px] bg-[#0B1220] border border-slate-700 flex items-center justify-center relative z-10 shadow-lg"
+            className="w-44 h-44 sm:w-48 sm:h-48 rounded-full bg-[#141214] border-2 border-[#BC881B]/50 flex items-center justify-center relative z-10 shadow-2xl p-3"
             style={{
               animation: 'crestEntrance 600ms cubic-bezier(0.16, 1, 0.3, 1) both, crestPulse 2s ease-in-out 600ms infinite alternate',
             }}
           >
-            <BookOpen className="w-9 h-9 text-[#60A5FA] stroke-[2]" />
-            <GraduationCap className="w-4 h-4 text-[#93C5FD] absolute top-2 right-2" />
+            <img 
+              src={ULM_CREST_SRC} 
+              alt="University of Lakki Marwat crest" 
+              width={180} 
+              height={180} 
+              className="w-full h-full object-contain"
+              style={{ imageRendering: 'auto' }}
+            />
           </div>
         </div>
 

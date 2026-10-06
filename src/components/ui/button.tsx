@@ -8,33 +8,40 @@ import { playClickSound } from "@/services/audio"
 import { BookSpinesLoader } from "@/components/decorative/BookSpinesLoader"
 
 const buttonVariants = cva(
-  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] text-[14px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 active:scale-[0.97] active:duration-[80ms] disabled:pointer-events-none disabled:text-[var(--text-muted)] disabled:bg-slate-900/60 select-none cursor-pointer overflow-hidden",
+  "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E0B450] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141214] active:scale-[0.98] select-none cursor-pointer overflow-hidden min-h-[32px] min-w-fit isolate",
   {
     variants: {
       variant: {
         default:
-          "bg-[#2563EB] hover:bg-[#3B82F6] active:bg-[#1D4ED8] text-[#F1F5F9] font-semibold border-none shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(37,99,235,0.28)]",
+          "btn-primary",
         primary:
-          "bg-[#2563EB] hover:bg-[#3B82F6] active:bg-[#1D4ED8] text-[#F1F5F9] font-semibold border-none shadow-[0_1px_2px_rgba(0,0,0,0.15)] hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(37,99,235,0.28)]",
+          "btn-primary",
         secondary:
-          "bg-transparent border border-[var(--border-control)] text-[var(--text-primary)] hover:bg-[var(--overlay-hover)]",
+          "btn-secondary",
         outline:
-          "bg-transparent border border-[var(--border-control)] text-[var(--text-primary)] hover:bg-[var(--overlay-hover)]",
+          "btn-secondary",
         destructive:
-          "bg-rose-500/15 hover:bg-rose-500/25 text-[#FCA5A5] dark:text-[#FCA5A5] light:bg-[#FEE2E2] light:text-[#991B1B] border border-rose-500/30 font-semibold hover:-translate-y-[1px]",
+          "btn-danger",
         danger:
-          "bg-rose-500/15 hover:bg-rose-500/25 text-[#FCA5A5] dark:text-[#FCA5A5] light:bg-[#FEE2E2] light:text-[#991B1B] border border-rose-500/30 font-semibold hover:-translate-y-[1px]",
+          "btn-danger",
         ghost:
-          "bg-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--overlay-hover)] border-none",
+          "btn-ghost",
+        tertiary:
+          "btn-tertiary",
         link:
-          "text-[var(--text-accent)] underline-offset-4 hover:underline p-0 h-auto border-none",
+          "text-[#E0B450] underline-offset-4 hover:underline p-0 h-auto border-none bg-transparent min-h-0 min-w-0 font-medium",
+        segmented:
+          "btn-segmented",
+        icon:
+          "btn-icon",
       },
       size: {
-        default: "h-10 px-4",
+        default: "h-9 px-3.5 text-[13px]",
+        md: "h-9 px-3.5 text-[13px]",
         sm: "h-8 px-3 text-[12px]",
         compact: "h-8 px-3 text-[12px]",
-        lg: "h-10 px-6",
-        icon: "h-8 w-8 min-w-[32px] p-0 hover:scale-[1.08] transition-transform duration-150",
+        lg: "h-10 px-4 text-[14px]",
+        icon: "h-8 w-8 min-w-[32px] min-h-[32px] p-0",
       },
     },
     defaultVariants: {
@@ -138,18 +145,20 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading ? (
-          <span className="inline-flex items-center justify-center gap-1.5">
+          <span className="btn-label relative z-[1] inline-flex items-center justify-center gap-1.5">
             <BookSpinesLoader />
             <Loader2 className="w-4 h-4 animate-spin text-current" />
             <span className="text-[12px] font-medium">Processing...</span>
           </span>
         ) : success ? (
-          <span className="inline-flex items-center justify-center gap-1.5 text-emerald-400 font-semibold animate-in zoom-in-75 duration-200">
+          <span className="btn-label relative z-[1] inline-flex items-center justify-center gap-1.5 text-emerald-400 font-semibold animate-in zoom-in-75 duration-200">
             <Check className="w-4 h-4 stroke-[3]" />
             <span className="text-[12px]">Success</span>
           </span>
         ) : (
-          children
+          <span className="btn-label relative z-[1] inline-flex items-center justify-center gap-2">
+            {children}
+          </span>
         )}
       </Comp>
     )

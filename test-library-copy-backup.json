@@ -18,9 +18,17 @@
       "description": "[TEST DATA] Repeated field register test volume 2.",
       "book_image_path": "",
       "dewey_call_number": "004.360",
-      "id": "book-1790934049948-ox5kgc",
-      "created_at": "2026-10-02 09:40:49",
-      "updated_at": "2026-10-02 09:40:49",
+      "id": "book-1791277075113-uqexer",
+      "accession_no": "10052",
+      "place": "",
+      "binding": "HB",
+      "source_remarks": "[TEST DATA] Repeated field register test volume 2.",
+      "title_sort": "A_[test data] vol 10052: distributed systems (2nd revised edition)",
+      "author_sort": "A_prof. andrew s. tanenbaum",
+      "search_text": "[test data] vol 10052: distributed systems (2nd revised edition) prof. andrew s. tanenbaum university of lakki marwat academic press computer science & it 10052 978-969-100052-2 004.360",
+      "date_added": "2026-10-06",
+      "created_at": "2026-10-06 08:57:55",
+      "updated_at": "2026-10-06 08:57:55",
       "is_active": false
     },
     {
@@ -41,9 +49,17 @@
       "description": "[TEST DATA] Repeated field register test volume 1.",
       "book_image_path": "",
       "dewey_call_number": "005.824",
-      "id": "book-1790934049947-zwilge",
-      "created_at": "2026-10-02 09:40:49",
-      "updated_at": "2026-10-02 09:40:49",
+      "id": "book-1791277075112-p1tm0z",
+      "accession_no": "10051",
+      "place": "",
+      "binding": "HB",
+      "source_remarks": "[TEST DATA] Repeated field register test volume 1.",
+      "title_sort": "A_[test data] vol 10051: advanced cryptography",
+      "author_sort": "A_prof. dr. tariq mahmud",
+      "search_text": "[test data] vol 10051: advanced cryptography prof. dr. tariq mahmud university of lakki marwat academic press computer science & it 10051 978-969-100051-1 005.824",
+      "date_added": "2026-10-06",
+      "created_at": "2026-10-06 08:57:55",
+      "updated_at": "2026-10-06 08:57:55",
       "is_active": true
     },
     {
@@ -69,7 +85,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10001: foundations of computer science & it",
+      "author_sort": "A_prof. dr. tariq mahmud",
+      "search_text": "[test data] volume 10001: foundations of computer science & it prof. dr. tariq mahmud university of lakki marwat academic press computer science & it 10001 978-969-100000-0 100.0"
     },
     {
       "id": "test-book-10002",
@@ -94,7 +114,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10002: foundations of software engineering",
+      "author_sort": "A_dr. ayesha siddiqa",
+      "search_text": "[test data] volume 10002: foundations of software engineering dr. ayesha siddiqa higher education commission pakistan software engineering 10002 978-969-100037-1 117.13"
     },
     {
       "id": "test-book-10003",
@@ -119,7 +143,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10003: foundations of mathematics & statistics",
+      "author_sort": "A_prof. ronald l. rivest",
+      "search_text": "[test data] volume 10003: foundations of mathematics & statistics prof. ronald l. rivest oxford university press pakistan mathematics & statistics 10003 978-969-100074-2 134.26"
     },
     {
       "id": "test-book-10004",
@@ -144,7 +172,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10004: foundations of physics & applied sciences",
+      "author_sort": "A_dr. muhammad usman marwat",
+      "search_text": "[test data] volume 10004: foundations of physics & applied sciences dr. muhammad usman marwat pearson education global physics & applied sciences 10004 978-969-100111-3 151.39"
     },
     {
       "id": "test-book-10005",
@@ -169,7 +201,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10005: foundations of chemistry",
+      "author_sort": "A_prof. andrew s. tanenbaum",
+      "search_text": "[test data] volume 10005: foundations of chemistry prof. andrew s. tanenbaum mcgraw-hill science & tech chemistry 10005 978-969-100148-4 168.52"
     },
     {
       "id": "test-book-10006",
@@ -194,7 +230,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10006: foundations of management sciences",
+      "author_sort": "A_dr. fatima zahra",
+      "search_text": "[test data] volume 10006: foundations of management sciences dr. fatima zahra national book foundation islamabad management sciences 10006 978-969-100185-5 185.65"
     },
     {
       "id": "test-book-10007",
@@ -219,7 +259,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10007: foundations of english literature & linguistics",
+      "author_sort": "A_prof. donald e. knuth",
+      "search_text": "[test data] volume 10007: foundations of english literature & linguistics prof. donald e. knuth cambridge university press english literature & linguistics 10007 978-969-100222-6 202.78"
     },
     {
       "id": "test-book-10008",
@@ -244,7 +288,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10008: foundations of education & research",
+      "author_sort": "A_dr. khalid khan khattak",
+      "search_text": "[test data] volume 10008: foundations of education & research dr. khalid khan khattak mit press academic education & research 10008 978-969-100259-7 219.91"
     },
     {
       "id": "test-book-10009",
@@ -269,7 +317,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10009: foundations of islamic studies & ethics",
+      "author_sort": "A_prof. stuart russell",
+      "search_text": "[test data] volume 10009: foundations of islamic studies & ethics prof. stuart russell university of lakki marwat academic press islamic studies & ethics 10009 978-969-100296-8 236.104"
     },
     {
       "id": "test-book-10010",
@@ -294,7 +346,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10010: foundations of pakistan studies & law",
+      "author_sort": "A_dr. zafar iqbal",
+      "search_text": "[test data] volume 10010: foundations of pakistan studies & law dr. zafar iqbal higher education commission pakistan pakistan studies & law 10010 978-969-100333-0 253.117"
     },
     {
       "id": "test-book-10011",
@@ -319,7 +375,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10011: foundations of computer science & it",
+      "author_sort": "A_prof. dr. tariq mahmud",
+      "search_text": "[test data] volume 10011: foundations of computer science & it prof. dr. tariq mahmud oxford university press pakistan computer science & it 10011 978-969-100370-1 270.130"
     },
     {
       "id": "test-book-10012",
@@ -344,7 +404,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10012: foundations of software engineering",
+      "author_sort": "A_dr. ayesha siddiqa",
+      "search_text": "[test data] volume 10012: foundations of software engineering dr. ayesha siddiqa pearson education global software engineering 10012 978-969-100407-2 287.143"
     },
     {
       "id": "test-book-10013",
@@ -369,7 +433,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10013: foundations of mathematics & statistics",
+      "author_sort": "A_prof. ronald l. rivest",
+      "search_text": "[test data] volume 10013: foundations of mathematics & statistics prof. ronald l. rivest mcgraw-hill science & tech mathematics & statistics 10013 978-969-100444-3 304.156"
     },
     {
       "id": "test-book-10014",
@@ -394,7 +462,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10014: foundations of physics & applied sciences",
+      "author_sort": "A_dr. muhammad usman marwat",
+      "search_text": "[test data] volume 10014: foundations of physics & applied sciences dr. muhammad usman marwat national book foundation islamabad physics & applied sciences 10014 978-969-100481-4 321.169"
     },
     {
       "id": "test-book-10015",
@@ -419,7 +491,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10015: foundations of chemistry",
+      "author_sort": "A_prof. andrew s. tanenbaum",
+      "search_text": "[test data] volume 10015: foundations of chemistry prof. andrew s. tanenbaum cambridge university press chemistry 10015 978-969-100518-5 338.182"
     },
     {
       "id": "test-book-10016",
@@ -444,7 +520,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10016: foundations of management sciences",
+      "author_sort": "A_dr. fatima zahra",
+      "search_text": "[test data] volume 10016: foundations of management sciences dr. fatima zahra mit press academic management sciences 10016 978-969-100555-6 355.195"
     },
     {
       "id": "test-book-10017",
@@ -469,7 +549,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10017: foundations of english literature & linguistics",
+      "author_sort": "A_prof. donald e. knuth",
+      "search_text": "[test data] volume 10017: foundations of english literature & linguistics prof. donald e. knuth university of lakki marwat academic press english literature & linguistics 10017 978-969-100592-7 372.208"
     },
     {
       "id": "test-book-10018",
@@ -494,7 +578,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10018: foundations of education & research",
+      "author_sort": "A_dr. khalid khan khattak",
+      "search_text": "[test data] volume 10018: foundations of education & research dr. khalid khan khattak higher education commission pakistan education & research 10018 978-969-100629-8 389.221"
     },
     {
       "id": "test-book-10019",
@@ -519,7 +607,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10019: foundations of islamic studies & ethics",
+      "author_sort": "A_prof. stuart russell",
+      "search_text": "[test data] volume 10019: foundations of islamic studies & ethics prof. stuart russell oxford university press pakistan islamic studies & ethics 10019 978-969-100666-0 406.234"
     },
     {
       "id": "test-book-10020",
@@ -544,7 +636,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10020: foundations of pakistan studies & law",
+      "author_sort": "A_dr. zafar iqbal",
+      "search_text": "[test data] volume 10020: foundations of pakistan studies & law dr. zafar iqbal pearson education global pakistan studies & law 10020 978-969-100703-1 423.247"
     },
     {
       "id": "test-book-10021",
@@ -569,7 +665,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10021: foundations of computer science & it",
+      "author_sort": "A_prof. dr. tariq mahmud",
+      "search_text": "[test data] volume 10021: foundations of computer science & it prof. dr. tariq mahmud mcgraw-hill science & tech computer science & it 10021 978-969-100740-2 440.260"
     },
     {
       "id": "test-book-10022",
@@ -594,7 +694,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10022: foundations of software engineering",
+      "author_sort": "A_dr. ayesha siddiqa",
+      "search_text": "[test data] volume 10022: foundations of software engineering dr. ayesha siddiqa national book foundation islamabad software engineering 10022 978-969-100777-3 457.273"
     },
     {
       "id": "test-book-10023",
@@ -619,7 +723,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10023: foundations of mathematics & statistics",
+      "author_sort": "A_prof. ronald l. rivest",
+      "search_text": "[test data] volume 10023: foundations of mathematics & statistics prof. ronald l. rivest cambridge university press mathematics & statistics 10023 978-969-100814-4 474.286"
     },
     {
       "id": "test-book-10024",
@@ -644,7 +752,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10024: foundations of physics & applied sciences",
+      "author_sort": "A_dr. muhammad usman marwat",
+      "search_text": "[test data] volume 10024: foundations of physics & applied sciences dr. muhammad usman marwat mit press academic physics & applied sciences 10024 978-969-100851-5 491.299"
     },
     {
       "id": "test-book-10025",
@@ -669,7 +781,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10025: foundations of chemistry",
+      "author_sort": "A_prof. andrew s. tanenbaum",
+      "search_text": "[test data] volume 10025: foundations of chemistry prof. andrew s. tanenbaum university of lakki marwat academic press chemistry 10025 978-969-100888-6 508.312"
     },
     {
       "id": "test-book-10026",
@@ -694,7 +810,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10026: foundations of management sciences",
+      "author_sort": "A_dr. fatima zahra",
+      "search_text": "[test data] volume 10026: foundations of management sciences dr. fatima zahra higher education commission pakistan management sciences 10026 978-969-100925-7 525.325"
     },
     {
       "id": "test-book-10027",
@@ -719,7 +839,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10027: foundations of english literature & linguistics",
+      "author_sort": "A_prof. donald e. knuth",
+      "search_text": "[test data] volume 10027: foundations of english literature & linguistics prof. donald e. knuth oxford university press pakistan english literature & linguistics 10027 978-969-100962-8 542.338"
     },
     {
       "id": "test-book-10028",
@@ -744,7 +868,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10028: foundations of education & research",
+      "author_sort": "A_dr. khalid khan khattak",
+      "search_text": "[test data] volume 10028: foundations of education & research dr. khalid khan khattak pearson education global education & research 10028 978-969-100999-0 559.351"
     },
     {
       "id": "test-book-10029",
@@ -769,7 +897,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10029: foundations of islamic studies & ethics",
+      "author_sort": "A_prof. stuart russell",
+      "search_text": "[test data] volume 10029: foundations of islamic studies & ethics prof. stuart russell mcgraw-hill science & tech islamic studies & ethics 10029 978-969-101036-1 576.364"
     },
     {
       "id": "test-book-10030",
@@ -794,7 +926,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10030: foundations of pakistan studies & law",
+      "author_sort": "A_dr. zafar iqbal",
+      "search_text": "[test data] volume 10030: foundations of pakistan studies & law dr. zafar iqbal national book foundation islamabad pakistan studies & law 10030 978-969-101073-2 593.377"
     },
     {
       "id": "test-book-10031",
@@ -819,7 +955,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10031: foundations of computer science & it",
+      "author_sort": "A_prof. dr. tariq mahmud",
+      "search_text": "[test data] volume 10031: foundations of computer science & it prof. dr. tariq mahmud cambridge university press computer science & it 10031 978-969-101110-3 610.390"
     },
     {
       "id": "test-book-10032",
@@ -844,7 +984,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10032: foundations of software engineering",
+      "author_sort": "A_dr. ayesha siddiqa",
+      "search_text": "[test data] volume 10032: foundations of software engineering dr. ayesha siddiqa mit press academic software engineering 10032 978-969-101147-4 627.403"
     },
     {
       "id": "test-book-10033",
@@ -869,7 +1013,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10033: foundations of mathematics & statistics",
+      "author_sort": "A_prof. ronald l. rivest",
+      "search_text": "[test data] volume 10033: foundations of mathematics & statistics prof. ronald l. rivest university of lakki marwat academic press mathematics & statistics 10033 978-969-101184-5 644.416"
     },
     {
       "id": "test-book-10034",
@@ -894,7 +1042,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10034: foundations of physics & applied sciences",
+      "author_sort": "A_dr. muhammad usman marwat",
+      "search_text": "[test data] volume 10034: foundations of physics & applied sciences dr. muhammad usman marwat higher education commission pakistan physics & applied sciences 10034 978-969-101221-6 661.429"
     },
     {
       "id": "test-book-10035",
@@ -919,7 +1071,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10035: foundations of chemistry",
+      "author_sort": "A_prof. andrew s. tanenbaum",
+      "search_text": "[test data] volume 10035: foundations of chemistry prof. andrew s. tanenbaum oxford university press pakistan chemistry 10035 978-969-101258-7 678.442"
     },
     {
       "id": "test-book-10036",
@@ -944,7 +1100,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10036: foundations of management sciences",
+      "author_sort": "A_dr. fatima zahra",
+      "search_text": "[test data] volume 10036: foundations of management sciences dr. fatima zahra pearson education global management sciences 10036 978-969-101295-8 695.455"
     },
     {
       "id": "test-book-10037",
@@ -969,7 +1129,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10037: foundations of english literature & linguistics",
+      "author_sort": "A_prof. donald e. knuth",
+      "search_text": "[test data] volume 10037: foundations of english literature & linguistics prof. donald e. knuth mcgraw-hill science & tech english literature & linguistics 10037 978-969-101332-0 712.468"
     },
     {
       "id": "test-book-10038",
@@ -994,7 +1158,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10038: foundations of education & research",
+      "author_sort": "A_dr. khalid khan khattak",
+      "search_text": "[test data] volume 10038: foundations of education & research dr. khalid khan khattak national book foundation islamabad education & research 10038 978-969-101369-1 729.481"
     },
     {
       "id": "test-book-10039",
@@ -1019,7 +1187,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10039: foundations of islamic studies & ethics",
+      "author_sort": "A_prof. stuart russell",
+      "search_text": "[test data] volume 10039: foundations of islamic studies & ethics prof. stuart russell cambridge university press islamic studies & ethics 10039 978-969-101406-2 746.494"
     },
     {
       "id": "test-book-10040",
@@ -1044,7 +1216,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10040: foundations of pakistan studies & law",
+      "author_sort": "A_dr. zafar iqbal",
+      "search_text": "[test data] volume 10040: foundations of pakistan studies & law dr. zafar iqbal mit press academic pakistan studies & law 10040 978-969-101443-3 763.507"
     },
     {
       "id": "test-book-10041",
@@ -1069,7 +1245,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10041: foundations of computer science & it",
+      "author_sort": "A_prof. dr. tariq mahmud",
+      "search_text": "[test data] volume 10041: foundations of computer science & it prof. dr. tariq mahmud university of lakki marwat academic press computer science & it 10041 978-969-101480-4 780.520"
     },
     {
       "id": "test-book-10042",
@@ -1094,7 +1274,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10042: foundations of software engineering",
+      "author_sort": "A_dr. ayesha siddiqa",
+      "search_text": "[test data] volume 10042: foundations of software engineering dr. ayesha siddiqa higher education commission pakistan software engineering 10042 978-969-101517-5 797.533"
     },
     {
       "id": "test-book-10043",
@@ -1119,7 +1303,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10043: foundations of mathematics & statistics",
+      "author_sort": "A_prof. ronald l. rivest",
+      "search_text": "[test data] volume 10043: foundations of mathematics & statistics prof. ronald l. rivest oxford university press pakistan mathematics & statistics 10043 978-969-101554-6 814.546"
     },
     {
       "id": "test-book-10044",
@@ -1144,7 +1332,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10044: foundations of physics & applied sciences",
+      "author_sort": "A_dr. muhammad usman marwat",
+      "search_text": "[test data] volume 10044: foundations of physics & applied sciences dr. muhammad usman marwat pearson education global physics & applied sciences 10044 978-969-101591-7 831.559"
     },
     {
       "id": "test-book-10045",
@@ -1169,7 +1361,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10045: foundations of chemistry",
+      "author_sort": "A_prof. andrew s. tanenbaum",
+      "search_text": "[test data] volume 10045: foundations of chemistry prof. andrew s. tanenbaum mcgraw-hill science & tech chemistry 10045 978-969-101628-8 848.572"
     },
     {
       "id": "test-book-10046",
@@ -1194,7 +1390,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10046: foundations of management sciences",
+      "author_sort": "A_dr. fatima zahra",
+      "search_text": "[test data] volume 10046: foundations of management sciences dr. fatima zahra national book foundation islamabad management sciences 10046 978-969-101665-0 865.585"
     },
     {
       "id": "test-book-10047",
@@ -1219,7 +1419,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10047: foundations of english literature & linguistics",
+      "author_sort": "A_prof. donald e. knuth",
+      "search_text": "[test data] volume 10047: foundations of english literature & linguistics prof. donald e. knuth cambridge university press english literature & linguistics 10047 978-969-101702-1 882.598"
     },
     {
       "id": "test-book-10048",
@@ -1244,7 +1448,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10048: foundations of education & research",
+      "author_sort": "A_dr. khalid khan khattak",
+      "search_text": "[test data] volume 10048: foundations of education & research dr. khalid khan khattak mit press academic education & research 10048 978-969-101739-2 899.611"
     },
     {
       "id": "test-book-10049",
@@ -1269,7 +1477,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10049: foundations of islamic studies & ethics",
+      "author_sort": "A_prof. stuart russell",
+      "search_text": "[test data] volume 10049: foundations of islamic studies & ethics prof. stuart russell university of lakki marwat academic press islamic studies & ethics 10049 978-969-101776-3 916.624"
     },
     {
       "id": "test-book-10050",
@@ -1294,7 +1506,11 @@
       "created_at": "2026-10-01 08:00:00",
       "updated_at": "2026-10-01 08:00:00",
       "is_active": true,
-      "is_test_data": true
+      "is_test_data": true,
+      "date_added": "2026-10-01",
+      "title_sort": "A_[test data] volume 10050: foundations of pakistan studies & law",
+      "author_sort": "A_dr. zafar iqbal",
+      "search_text": "[test data] volume 10050: foundations of pakistan studies & law dr. zafar iqbal higher education commission pakistan pakistan studies & law 10050 978-969-101813-4 933.637"
     }
   ],
   "borrowers": [
@@ -1314,9 +1530,9 @@
       "status": "active",
       "notes": "[TEST DATA] Lifecycle test borrower",
       "student_id": "ULM-FA26-CS-999",
-      "id": "bor-1790934049955-4nwusk",
-      "created_at": "2026-10-02 09:40:49",
-      "updated_at": "2026-10-02 09:40:49",
+      "id": "bor-1791277075118-3935fq",
+      "created_at": "2026-10-06 08:57:55",
+      "updated_at": "2026-10-06 08:57:55",
       "is_active": true
     },
     {
@@ -1572,20 +1788,20 @@
   ],
   "transactions": [
     {
-      "id": "tx-1790934049956-ne50mh",
+      "id": "tx-1791277075119-eav90t",
       "book_id": "test-book-10020",
-      "borrower_id": "bor-1790934049955-4nwusk",
+      "borrower_id": "bor-1791277075118-3935fq",
       "book_name": "[TEST DATA] Volume 10020: Foundations of Pakistan Studies & Law",
       "borrower_name": "[TEST DATA] Candidate Student 999",
       "barcode": "10020",
       "student_id": "ULM-FA26-CS-999",
       "action": "ISSUE",
-      "issue_date": "2026-10-02",
-      "due_date": "2026-10-16",
-      "return_date": "2026-10-02",
+      "issue_date": "2026-10-06",
+      "due_date": "2026-10-20",
+      "return_date": "2026-10-06",
       "quantity": 1,
       "status": "RETURNED",
-      "created_at": "2026-10-02 09:40:49"
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "id": "test-tx-1000",
@@ -1617,7 +1833,7 @@
       "action": "ISSUE",
       "issue_date": "2026-09-01 09:00:00",
       "due_date": "2026-09-15 09:00:00",
-      "return_date": "2026-10-02",
+      "return_date": "2026-10-06",
       "quantity": 1,
       "status": "RETURNED",
       "created_at": "2026-09-01 09:00:00",
@@ -1786,73 +2002,73 @@
       "book_id": "test-book-10002",
       "borrower_id": "test-borrower-102",
       "user": "Circulation-Desk-01",
-      "id": "hist-1790934049957-151",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075121-134",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "action": "BOOK_RETURNED",
       "description": "Returned copy of \"[TEST DATA] Volume 10020: Foundations of Pakistan Studies & Law\" from [TEST DATA] Candidate Student 999",
       "barcode": "10020",
       "book_id": "test-book-10020",
-      "borrower_id": "bor-1790934049955-4nwusk",
+      "borrower_id": "bor-1791277075118-3935fq",
       "user": "Circulation-Desk-01",
-      "id": "hist-1790934049956-186",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075120-692",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "action": "BOOK_ISSUED",
-      "description": "Issued \"[TEST DATA] Volume 10020: Foundations of Pakistan Studies & Law\" to [TEST DATA] Candidate Student 999 (ULM-FA26-CS-999) - Due: 2026-10-16",
+      "description": "Issued \"[TEST DATA] Volume 10020: Foundations of Pakistan Studies & Law\" to [TEST DATA] Candidate Student 999 (ULM-FA26-CS-999) - Due: 2026-10-20",
       "barcode": "10020",
       "book_id": "test-book-10020",
-      "borrower_id": "bor-1790934049955-4nwusk",
+      "borrower_id": "bor-1791277075118-3935fq",
       "user": "Circulation-Desk-01",
-      "id": "hist-1790934049956-34",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075119-428",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "action": "BORROWER_ADDED",
       "description": "Registered Student \"[TEST DATA] Candidate Student 999\" (ULM-FA26-CS-999)",
       "barcode": "ULM-FA26-CS-999",
-      "borrower_id": "bor-1790934049955-4nwusk",
+      "borrower_id": "bor-1791277075118-3935fq",
       "user": "Desk-Registrar",
-      "id": "hist-1790934049955-741",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075118-322",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "action": "BOOK_DELETED",
       "description": "Soft-deleted (archived) book \"[TEST DATA] Vol 10052: Distributed Systems (2nd Revised Edition)\" (10052)",
       "barcode": "10052",
-      "book_id": "book-1790934049948-ox5kgc",
+      "book_id": "book-1791277075113-uqexer",
       "user": "Librarian-Admin",
-      "id": "hist-1790934049950-293",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075116-238",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "action": "BOOK_UPDATED",
       "description": "Updated record for \"[TEST DATA] Vol 10052: Distributed Systems (2nd Revised Edition)\"",
       "barcode": "10052",
-      "book_id": "book-1790934049948-ox5kgc",
+      "book_id": "book-1791277075113-uqexer",
       "user": "Librarian-Admin",
-      "id": "hist-1790934049949-669",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075115-271",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "action": "BOOK_ADDED",
-      "description": "Added \"[TEST DATA] Vol 10052: Distributed Systems\" (Barcode: 10052, Copies: 2)",
+      "description": "Added \"[TEST DATA] Vol 10052: Distributed Systems\" (Barcode: 10052, Language: English, Copies: 2)",
       "barcode": "10052",
-      "book_id": "book-1790934049948-ox5kgc",
+      "book_id": "book-1791277075113-uqexer",
       "user": "Librarian-Admin",
-      "id": "hist-1790934049948-177",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075114-475",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "action": "BOOK_ADDED",
-      "description": "Added \"[TEST DATA] Vol 10051: Advanced Cryptography\" (Barcode: 10051, Copies: 2)",
+      "description": "Added \"[TEST DATA] Vol 10051: Advanced Cryptography\" (Barcode: 10051, Language: English, Copies: 2)",
       "barcode": "10051",
-      "book_id": "book-1790934049947-zwilge",
+      "book_id": "book-1791277075112-p1tm0z",
       "user": "Librarian-Admin",
-      "id": "hist-1790934049948-29",
-      "created_at": "2026-10-02 09:40:49"
+      "id": "hist-1791277075113-756",
+      "created_at": "2026-10-06 08:57:55"
     },
     {
       "id": "hist-001",
@@ -1911,6 +2127,8 @@
     "error_sound": true,
     "db_path": "C:\\ProgramData\\ULM_LMS\\library.db",
     "wal_mode": true,
-    "station_id": "LMS-WIN-01"
+    "station_id": "LMS-WIN-01",
+    "barcode_prefix": "ULM",
+    "first_accession_number": 1
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   BookOpen, 
   Layers, 
@@ -22,7 +22,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Download
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Book, Transaction } from '../types/library';
 import { CatalogChartsView } from './catalog/CatalogChartsView';
@@ -31,6 +32,7 @@ import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton';
 import CustomSelect from './ui/CustomSelect';
 import { EmptyStateBooksDeco } from './decorative/EmptyStateBooksDeco';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { isArabicOrUrduScript, matchesUrduSearch } from '../utils/urduUtils';
 
 interface BooksCatalogViewProps {
   books: Book[];
@@ -41,6 +43,8 @@ interface BooksCatalogViewProps {
   onDeleteBook: (book: Book) => void;
   onQuickLoan: (book: Book) => void;
   onPrintBarcode: (book: Book) => void;
+  onOpenImportBookEntrySheet?: () => void;
+  onOpenBatchLabelPrint?: () => void;
 }
 
 export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
@@ -52,16 +56,36 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
   onDeleteBook,
   onQuickLoan,
   onPrintBarcode,
+  onOpenImportBookEntrySheet,
+  onOpenBatchLabelPrint,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedLanguage, setSelectedLanguage] = useState('ALL');
   const [sortBy, setSortBy] = useState<string>(() => {
     return localStorage.getItem('ulm_lms_catalog_sort') || 'newest_added';
   });
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'chart'>('grid');
+
+  // Quick keyboard shortcut: Pressing "/" or Ctrl+F focuses the catalog search input
+  useEffect(() => {
+    const handleGlobalSearchKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (!isInput && (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f'))) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalSearchKey);
+    return () => window.removeEventListener('keydown', handleGlobalSearchKey);
+  }, []);
 
   const handleSortChange = (newSort: string) => {
     setSortBy(newSort);
@@ -78,7 +102,7 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
   };
 
   const handleDownloadBookCsvTemplate = () => {
-    const templateCsv = `Barcode,ISBN,BookTitle,Author,Category,TotalCopies,Shelf,DeweyCallNumber,Publisher,Edition,Year,DateAdded\r\nULM-10021,978-0-13-235088-4,Clean Code: Agile Software,Robert C. Martin,Computer Science,3,CS-Rack-01,005.133 ULM,Prentice Hall,1st Edition,2024,2026-10-02\r\nULM-10022,978-0-262-03384-8,Introduction to Algorithms,Thomas H. Cormen,Computer Science,5,CS-Rack-02,518.1 COR,MIT Press,4th Edition,2022,02-Oct-2026\r\nULM-10023,978-0-13-468599-1,Effective Java,Joshua Bloch,Computer Science,4,CS-Rack-03,005.133 BLO,Addison-Wesley,3rd Edition,2018,15/09/2026\r\n# Notes: DateAdded supports YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD-MMM-YYYY. Blank defaults to today.`;
+    const templateCsv = `Barcode,ISBN,BookTitle,Author,Category,TotalCopies,Shelf,DeweyCallNumber,Publisher,Edition,Year,Language,DateAdded\r\nULM-10021,978-0-13-235088-4,Clean Code: Agile Software,Robert C. Martin,Computer Science,3,CS-Rack-01,005.133 ULM,Prentice Hall,1st Edition,2024,English,2026-10-02\r\nULM-10022,978-969-415-101-4,بانگِ درا,علامہ محمد اقبال,Urdu Literature,5,URDU-Rack-01,891.4391 IQB,اقبال اکادمی پاکستان,1st Edition,2022,Urdu,02-Oct-2026\r\nULM-10023,978-0-13-468599-1,Effective Java,Joshua Bloch,Computer Science,4,CS-Rack-03,005.133 BLO,Addison-Wesley,3rd Edition,2018,English,15/09/2026\r\n# Notes: DateAdded supports YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD-MMM-YYYY. Blank defaults to today.`;
     const blob = new Blob([templateCsv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -95,7 +119,8 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
   const totalCopies = activeBooks.reduce((sum, b) => sum + b.total_quantity, 0);
   const totalAvailable = activeBooks.reduce((sum, b) => sum + b.available_quantity, 0);
   const activeBorrowed = totalCopies - totalAvailable;
-  
+  const availPercent = totalCopies > 0 ? Math.round((totalAvailable / totalCopies) * 100) : 100;
+
   const overdueCount = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return transactions.filter(t => t.status === 'OVERDUE' || (t.status === 'ACTIVE' && t.due_date < today)).length;
@@ -111,13 +136,17 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
   const filteredBooks = useMemo(() => {
     return activeBooks
       .filter(book => {
-        const query = searchQuery.toLowerCase().trim();
+        const query = searchQuery.trim();
         const matchesQuery = !query || 
-          book.book_name.toLowerCase().includes(query) ||
-          book.author.toLowerCase().includes(query) ||
-          book.barcode.toLowerCase().includes(query) ||
-          book.isbn.toLowerCase().includes(query) ||
-          book.dewey_call_number.toLowerCase().includes(query);
+          matchesUrduSearch(query, book.search_text || `${book.book_name} ${book.author} ${book.barcode} ${book.accession_no || ''} ${book.isbn} ${book.dewey_call_number}`) ||
+          (book.accession_no && book.accession_no.toLowerCase().includes(query.toLowerCase())) ||
+          (book.shelf && book.shelf.toLowerCase().includes(query.toLowerCase())) ||
+          (book.publisher && book.publisher.toLowerCase().includes(query.toLowerCase())) ||
+          (book.title_roman && book.title_roman.toLowerCase().includes(query.toLowerCase())) ||
+          (book.author_roman && book.author_roman.toLowerCase().includes(query.toLowerCase())) ||
+          book.barcode.toLowerCase().includes(query.toLowerCase()) ||
+          book.isbn.toLowerCase().includes(query.toLowerCase()) ||
+          book.dewey_call_number.toLowerCase().includes(query.toLowerCase());
 
         const matchesCategory = selectedCategory === 'ALL' || book.category === selectedCategory;
         const matchesStatus = 
@@ -125,11 +154,16 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
           (selectedStatus === 'AVAILABLE' && book.available_quantity > 0) ||
           (selectedStatus === 'LOANED' && book.available_quantity === 0);
 
+        const matchesLanguage = selectedLanguage === 'ALL' ||
+          (selectedLanguage === 'Urdu' && (book.language === 'Urdu' || isArabicOrUrduScript(book.book_name))) ||
+          (selectedLanguage === 'English' && (!book.language || book.language === 'English') && !isArabicOrUrduScript(book.book_name)) ||
+          ((book.language || '').toLowerCase() === selectedLanguage.toLowerCase());
+
         const bookDate = book.date_added || (book.created_at ? book.created_at.split(' ')[0] : '');
         const matchesDateFrom = !dateFrom || (bookDate && bookDate >= dateFrom);
         const matchesDateTo = !dateTo || (bookDate && bookDate <= dateTo);
 
-        return matchesQuery && matchesCategory && matchesStatus && matchesDateFrom && matchesDateTo;
+        return matchesQuery && matchesCategory && matchesStatus && matchesLanguage && matchesDateFrom && matchesDateTo;
       })
       .sort((a, b) => {
         if (sortBy === 'newest_added') {
@@ -180,19 +214,41 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
           return b.barcode.localeCompare(a.barcode);
         }
 
-        if (sortBy === 'title') return a.book_name.localeCompare(b.book_name);
-        if (sortBy === 'author') return a.author.localeCompare(b.author);
+        if (sortBy === 'title') {
+          const keyA = a.title_sort || a.book_name;
+          const keyB = b.title_sort || b.book_name;
+          return keyA.localeCompare(keyB);
+        }
+
+        if (sortBy === 'title_desc') {
+          const keyA = a.title_sort || a.book_name;
+          const keyB = b.title_sort || b.book_name;
+          return keyB.localeCompare(keyA);
+        }
+
+        if (sortBy === 'author') {
+          const keyA = a.author_sort || a.author;
+          const keyB = b.author_sort || b.author;
+          return keyA.localeCompare(keyB);
+        }
+
+        if (sortBy === 'author_desc') {
+          const keyA = a.author_sort || a.author;
+          const keyB = b.author_sort || b.author;
+          return keyB.localeCompare(keyA);
+        }
+
         if (sortBy === 'copies') return b.total_quantity - a.total_quantity;
         if (sortBy === 'year') return b.publication_year - a.publication_year;
         return 0;
       });
-  }, [activeBooks, searchQuery, selectedCategory, selectedStatus, sortBy, dateFrom, dateTo]);
+  }, [activeBooks, searchQuery, selectedCategory, selectedStatus, selectedLanguage, sortBy, dateFrom, dateTo]);
 
   // Generate SVG-like barcode bars based on barcode string (always high contrast in light & dark)
   const renderBarcodeStrip = (code: string) => {
     return (
       <div 
-        className="barcode-container flex items-center gap-[1.5px] h-6 px-1.5 py-0.5 bg-[#0F172A] rounded border border-slate-300 shadow-2xs select-none" 
+        className="barcode-container flex items-center gap-[1.5px] h-6 px-1.5 py-0.5 bg-white rounded-[4px] border border-white/20 select-none shadow-xs" 
         title={`Barcode: ${code}`}
         data-barcode-container="true"
       >
@@ -212,122 +268,162 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
   };
 
   return (
-    <div className="flex-1 w-full bg-fluent-matrix px-8 py-7 overflow-y-auto space-y-7">
+    <div className="flex-1 w-full bg-fluent-matrix px-6 sm:px-8 py-7 overflow-y-auto space-y-7">
       <div className="max-w-[1920px] mx-auto space-y-7">
         
         {/* Operational Collection Metrics (Institutional Library Standard) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {/* Metric 1: Cataloged Titles */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[12px] p-5 shadow-[var(--shadow-card)] hover:border-blue-500/30 transition-all card-stagger-1">
-            <div className="flex items-start justify-between">
+          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-1 min-h-[140px]">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#BC881B]" />
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Cataloged Titles</p>
-                <h3 className="text-[28px] font-bold text-[var(--text-primary)] mt-1 tabular-nums leading-tight">
+                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Cataloged Titles</p>
+                <h3 className="text-[32px] font-bold text-white mt-1.5 tabular-nums leading-none tracking-tight">
                   <CountUp end={totalTitles} durationMs={800} />
                 </h3>
-                <p className="text-[12px] text-[var(--text-muted)] mt-1.5">
-                  Across {categories.length} disciplines
-                </p>
               </div>
-              <div className="w-10 h-10 rounded-[8px] bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-[var(--text-accent)] shrink-0">
+              <div className="w-11 h-11 rounded-[10px] bg-[#BC881B]/15 border border-[#BC881B]/30 flex items-center justify-center text-[#E0B450] shrink-0 shadow-2xs">
                 <BookOpen className="w-5 h-5 stroke-[2]" />
               </div>
             </div>
+            <p className="text-[12px] text-[#B3AABD] mt-3">
+              Across <span className="text-white font-medium">{categories.length}</span> disciplines
+            </p>
           </div>
 
           {/* Metric 2: Physical Volumes */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[12px] p-5 shadow-[var(--shadow-card)] hover:border-blue-500/30 transition-all card-stagger-2">
-            <div className="flex items-start justify-between">
+          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-2 min-h-[140px]">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#A66BC9]" />
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Physical Volumes</p>
-                <h3 className="text-[28px] font-bold text-[var(--text-primary)] mt-1 tabular-nums leading-tight">
+                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Physical Volumes</p>
+                <h3 className="text-[32px] font-bold text-white mt-1.5 tabular-nums leading-none tracking-tight">
                   <CountUp end={totalCopies} durationMs={800} />
                 </h3>
-                <p className="text-[12px] text-[var(--text-muted)] mt-1.5">
-                  {activeBorrowed} currently in circulation
-                </p>
               </div>
-              <div className="w-10 h-10 rounded-[8px] bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0">
+              <div className="w-11 h-11 rounded-[10px] bg-[#541A72]/30 border border-[#A66BC9]/30 flex items-center justify-center text-[#A66BC9] shrink-0 shadow-2xs">
                 <Layers className="w-5 h-5 stroke-[2]" />
               </div>
             </div>
+            <p className="text-[12px] text-[#B3AABD] mt-3">
+              <span className="text-white font-medium">{activeBorrowed}</span> currently in circulation
+            </p>
           </div>
 
           {/* Metric 3: Shelf Availability */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[12px] p-5 shadow-[var(--shadow-card)] hover:border-blue-500/30 transition-all card-stagger-3">
-            <div className="flex items-start justify-between">
+          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-3 min-h-[140px]">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#BC881B]" />
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Shelf Availability</p>
-                <h3 className="text-[28px] font-bold text-emerald-500 dark:text-emerald-400 mt-1 tabular-nums leading-tight">
+                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Shelf Availability</p>
+                <h3 className="text-[32px] font-bold text-emerald-400 mt-1.5 tabular-nums leading-none tracking-tight">
                   <CountUp end={totalAvailable} durationMs={800} />
                 </h3>
-                <p className="text-[12px] text-[var(--text-muted)] mt-1.5">
-                  {totalCopies > 0 ? `${Math.round((totalAvailable / totalCopies) * 100)}% available for loan` : '100% available'}
-                </p>
               </div>
-              <div className="w-10 h-10 rounded-[8px] bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-500 dark:text-emerald-400 shrink-0">
+              <div className="w-11 h-11 rounded-[10px] bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-2xs">
                 <CheckCircle2 className="w-5 h-5 stroke-[2]" />
+              </div>
+            </div>
+            <div className="mt-2.5 space-y-1.5">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="text-[#B3AABD]">{availPercent}% available for loan</span>
+                <span className="text-emerald-400 font-mono text-[11px] font-semibold">{totalAvailable} / {totalCopies}</span>
+              </div>
+              <div className="w-full bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
+                  style={{ width: `${availPercent}%` }} 
+                />
               </div>
             </div>
           </div>
 
           {/* Metric 4: Active Loans & Overdue */}
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-[12px] p-5 shadow-[var(--shadow-card)] hover:border-blue-500/30 transition-all card-stagger-4">
-            <div className="flex items-start justify-between">
+          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-4 min-h-[140px]">
+            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#541A72]" />
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Active Loans</p>
-                <h3 className="text-[28px] font-bold text-[var(--text-primary)] mt-1 tabular-nums leading-tight">
+                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Active Loans</p>
+                <h3 className="text-[32px] font-bold text-white mt-1.5 tabular-nums leading-none tracking-tight">
                   <CountUp end={activeBorrowed} durationMs={800} />
                 </h3>
-                <p className="text-[12px] mt-1.5 flex items-center gap-1.5 font-medium">
-                  {overdueCount > 0 ? (
-                    <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1 font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                      {overdueCount} overdue {overdueCount === 1 ? 'notice' : 'notices'}
-                    </span>
-                  ) : (
-                    <span className="text-[var(--text-muted)]">All current (0 overdue)</span>
-                  )}
-                </p>
               </div>
-              <div className="w-10 h-10 rounded-[8px] bg-purple-500/10 border border-purple-500/25 flex items-center justify-center text-purple-400 shrink-0">
+              <div className="w-11 h-11 rounded-[10px] bg-[#541A72]/30 border border-[#A66BC9]/30 flex items-center justify-center text-[#A66BC9] shrink-0 shadow-2xs">
                 <Clock className="w-5 h-5 stroke-[2]" />
               </div>
+            </div>
+            <div className="mt-2.5 flex items-center min-h-[22px]">
+              {overdueCount > 0 ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[12px] font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+                  {overdueCount} overdue {overdueCount === 1 ? 'notice' : 'notices'}
+                </span>
+              ) : (
+                <span className="text-[12px] text-[#B3AABD]">All current (0 overdue)</span>
+              )}
             </div>
           </div>
         </div>
 
         {/* Filter & Search Action Bar */}
-        <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
-          {/* Left: Wide search input field with [Ctrl + K] badge */}
-          <div className="relative flex-1 min-w-[260px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <div className="bg-[#1E1B22]/90 backdrop-blur-md border border-white/[0.08] rounded-[16px] p-3 sm:p-3.5 shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Wide search input field with keyboard shortcut and clear action */}
+          <div className="relative flex-1 min-w-[260px] sm:min-w-[320px]">
+            <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-150 ${
+              isSearchFocused ? 'text-[#BC881B]' : 'text-[#B3AABD]'
+            }`} />
             <input
+              ref={searchInputRef}
+              id="catalog-search-input"
+              name="catalogSearch"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Title, Author, ISBN-13, Barcode, Call Number..."
-              className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg pl-10 pr-24 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors search-input-expand"
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && searchQuery) {
+                  e.stopPropagation();
+                  setSearchQuery('');
+                }
+              }}
+              placeholder="Search title, author, barcode, accession, ISBN..."
+              aria-label="Search catalog books"
+              autoComplete="off"
+              spellCheck={false}
+              className={`w-full h-10 bg-[#141214] hover:bg-[#1A181C] focus:bg-[#141214] border rounded-[10px] pl-10 pr-10 py-2 text-[13px] text-white placeholder:text-[#8E8698] transition-all duration-150 shadow-[0_1px_3px_rgba(0,0,0,0.3)] ${
+                isSearchFocused
+                  ? 'border-[#BC881B] ring-2 ring-[#BC881B]/25 outline-none'
+                  : 'border-white/[0.08] hover:border-white/[0.18]'
+              }`}
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
-                className="search-clear-icon absolute right-20 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
-                title="Clear search"
+                onClick={() => {
+                  setSearchQuery('');
+                  searchInputRef.current?.focus();
+                }}
+                className="w-6 h-6 flex items-center justify-center absolute right-2.5 top-1/2 -translate-y-1/2 text-[#B3AABD] hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer rounded-[5px]"
+                title="Clear search (Esc)"
+                aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
-            )}
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-mono-code text-slate-500 dark:text-slate-400">
-              <span>Ctrl + K</span>
-            </div>
+            ) : !isSearchFocused ? (
+              <div
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-[5px] bg-white/[0.05] border border-white/[0.08] text-[10px] font-mono text-[#8E8698] pointer-events-none select-none"
+              >
+                <span>/</span>
+              </div>
+            ) : null}
           </div>
 
           {/* Center: Dropdown selects */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {/* Category select */}
-            <div className="w-44">
+            <div className="w-48 min-w-[170px]">
               <CustomSelect
                 value={selectedCategory}
                 onChange={(val) => setSelectedCategory(val)}
@@ -336,12 +432,12 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                   ...categories.map(c => ({ value: c, label: c }))
                 ]}
                 searchable
-                compact
+                variant="dark"
               />
             </div>
 
             {/* Status select */}
-            <div className="w-40">
+            <div className="w-40 min-w-[145px]">
               <CustomSelect
                 value={selectedStatus}
                 onChange={(val) => setSelectedStatus(val)}
@@ -350,121 +446,176 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                   { value: 'AVAILABLE', label: 'Available Now', badge: 'Ready' },
                   { value: 'LOANED', label: 'Fully Loaned', badge: 'Out' }
                 ]}
-                compact
+                variant="dark"
+              />
+            </div>
+
+            {/* Language filter select */}
+            <div className="w-40 min-w-[145px]">
+              <CustomSelect
+                value={selectedLanguage}
+                onChange={(val) => setSelectedLanguage(val)}
+                options={[
+                  { value: 'ALL', label: 'All Languages' },
+                  { value: 'English', label: 'English' },
+                  { value: 'Urdu', label: 'Urdu (اردو)', badge: 'Nastaliq' },
+                  { value: 'Arabic', label: 'Arabic' },
+                  { value: 'Pashto', label: 'Pashto' },
+                ]}
+                variant="dark"
               />
             </div>
 
             {/* Sort select */}
-            <div className="w-48">
+            <div className="w-56 min-w-[210px]">
               <CustomSelect
                 value={sortBy}
                 onChange={(val) => handleSortChange(val)}
                 options={[
-                  { value: 'newest_added', label: 'Sort: Newest Added First' },
-                  { value: 'oldest_added', label: 'Sort: Oldest Added First' },
-                  { value: 'accession', label: 'Sort: Accession No (Asc)' },
-                  { value: 'accession_desc', label: 'Sort: Accession No (Desc)' },
-                  { value: 'title', label: 'Sort: Title (A-Z)' },
+                  { value: 'newest_added', label: 'Sort: Newest Added' },
+                  { value: 'oldest_added', label: 'Sort: Oldest Added' },
+                  { value: 'accession', label: 'Sort: Accession (Asc)' },
+                  { value: 'accession_desc', label: 'Sort: Accession (Desc)' },
+                  { value: 'title', label: 'Sort: Title (A-Z / الف تا ے)' },
+                  { value: 'title_desc', label: 'Sort: Title (Z-A / ے تا الف)' },
                   { value: 'author', label: 'Sort: Author (A-Z)' },
+                  { value: 'author_desc', label: 'Sort: Author (Z-A)' },
                   { value: 'copies', label: 'Sort: Total Copies' },
                   { value: 'year', label: 'Sort: Publication Year' }
                 ]}
-                compact
+                variant="dark"
               />
             </div>
 
             {/* Date Added Filter Range */}
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg px-2.5 py-1 text-xs">
-              <Calendar className="w-3.5 h-3.5 text-amber-500/80 shrink-0" />
-              <span className="text-[10px] text-slate-400 font-mono">Added:</span>
+            <div className="h-10 flex items-center gap-2 bg-[#141214] border border-white/[0.08] rounded-[10px] px-3 text-[12px]">
+              <Calendar className="w-4 h-4 text-[#BC881B] shrink-0" />
+              <span className="text-[12px] text-[#B3AABD] font-mono">Added:</span>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
                 title="Date Added From"
-                className="bg-transparent text-[11px] font-mono text-slate-300 focus:outline-none cursor-pointer"
+                className="[color-scheme:dark] bg-transparent text-[12px] font-mono text-white focus:outline-none cursor-pointer"
               />
-              <span className="text-[10px] text-slate-500 font-mono">to</span>
+              <span className="text-[12px] text-[#B3AABD] font-mono px-0.5">to</span>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
                 title="Date Added To"
-                className="bg-transparent text-[11px] font-mono text-slate-300 focus:outline-none cursor-pointer"
+                className="[color-scheme:dark] bg-transparent text-[12px] font-mono text-white focus:outline-none cursor-pointer"
               />
               {(dateFrom || dateTo) && (
                 <button
                   type="button"
                   onClick={() => { setDateFrom(''); setDateTo(''); }}
-                  className="p-0.5 text-slate-400 hover:text-slate-200 cursor-pointer ml-0.5"
+                  className="w-8 h-8 min-w-[32px] min-h-[32px] flex items-center justify-center text-[#B3AABD] hover:text-white cursor-pointer ml-0.5 rounded-[6px]"
                   title="Clear date range"
+                  aria-label="Clear date range"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Right: Grid/List toggle + CSV Template + "+ Add New Book" primary button */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative flex items-center bg-slate-100 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg p-1 gap-1">
+          {/* Right: Grid/List toggle + CSV Template + Add Book */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="h-10 flex items-center bg-[#141214] border border-white/[0.08] rounded-[10px] p-1 gap-1">
               <button
+                type="button"
                 onClick={() => setViewMode('grid')}
-                className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                aria-pressed={viewMode === 'grid'}
+                className={`btn-segmented flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12px] font-semibold transition-all duration-150 cursor-pointer ${
                   viewMode === 'grid' 
-                    ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200/80 dark:border-slate-700' 
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    ? 'btn-selected bg-[#BC881B] text-[#1A1A1A] font-bold shadow-[0_2px_8px_rgba(188,136,27,0.35)]' 
+                    : 'text-[#B3AABD] hover:text-white hover:bg-white/[0.05]'
                 }`}
                 title="Switch to Card Grid View"
                 aria-label="Grid View"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Grid View</span>
+                <span className="btn-label">Grid View</span>
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('list')}
-                className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                aria-pressed={viewMode === 'list'}
+                className={`btn-segmented flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12px] font-semibold transition-all duration-150 cursor-pointer ${
                   viewMode === 'list' 
-                    ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200/80 dark:border-slate-700' 
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    ? 'btn-selected bg-[#BC881B] text-[#1A1A1A] font-bold shadow-[0_2px_8px_rgba(188,136,27,0.35)]' 
+                    : 'text-[#B3AABD] hover:text-white hover:bg-white/[0.05]'
                 }`}
                 title="Switch to Table List View"
                 aria-label="List View"
               >
                 <List className="w-3.5 h-3.5" />
-                <span>List View</span>
+                <span className="btn-label">List View</span>
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('chart')}
-                className={`relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                aria-pressed={viewMode === 'chart'}
+                className={`btn-segmented flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12px] font-semibold transition-all duration-150 cursor-pointer ${
                   viewMode === 'chart' 
-                    ? 'bg-[#1E293B] text-amber-600 dark:text-amber-400 shadow-xs border border-slate-200/80 dark:border-slate-700' 
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    ? 'btn-selected bg-[#BC881B] text-[#1A1A1A] font-bold shadow-[0_2px_8px_rgba(188,136,27,0.35)]' 
+                    : 'text-[#B3AABD] hover:text-white hover:bg-white/[0.05]'
                 }`}
                 title="Switch to Interactive Chart Analytics View"
                 aria-label="Chart View"
               >
                 <BarChart3 className="w-3.5 h-3.5" />
-                <span>Chart View</span>
+                <span className="btn-label">Chart View</span>
               </button>
             </div>
 
+            {/* Batch Barcode Labels Generator */}
+            {onOpenBatchLabelPrint && (
+              <button
+                type="button"
+                onClick={onOpenBatchLabelPrint}
+                className="btn-secondary h-10 px-3.5 rounded-[10px] font-semibold text-[13px] inline-flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+                title="Print batch thermal barcode labels for cataloged volumes"
+              >
+                <Printer className="w-4 h-4 text-[#E0B450] shrink-0" />
+                <span className="btn-label hidden sm:inline">Batch Labels</span>
+              </button>
+            )}
+
+            {/* Book Entry Sheet Importer */}
+            {onOpenImportBookEntrySheet && (
+              <button
+                type="button"
+                onClick={onOpenImportBookEntrySheet}
+                className="btn-secondary h-10 px-3.5 rounded-[10px] font-semibold text-[13px] inline-flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+                title="Import catalog from ULM_Book_Entry_Sheet.xlsx"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="btn-label hidden sm:inline">Import Sheet</span>
+              </button>
+            )}
+
             {/* CSV Template Download */}
             <button
+              type="button"
               onClick={handleDownloadBookCsvTemplate}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+              className="btn-ghost h-10 px-3.5 rounded-[10px] font-semibold text-[13px] inline-flex items-center gap-2 transition-all border border-white/[0.12] cursor-pointer shadow-xs"
               title="Download official catalog CSV template with DateAdded column"
             >
-              <Download className="w-3.5 h-3.5 text-amber-400" />
-              <span>CSV Template</span>
+              <Download className="w-4 h-4 text-[#BC881B] shrink-0" />
+              <span className="btn-label hidden md:inline">CSV Template</span>
             </button>
 
+            {/* Add Book Button matching header primary */}
             <button
+              type="button"
               onClick={onOpenAddBook}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+              className="btn-primary h-10 px-4 rounded-[10px] text-[13px] font-bold inline-flex items-center gap-2 cursor-pointer shadow-md"
+              title="Catalog a new reference volume"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Add Book</span>
+              <Plus className="w-4 h-4 stroke-[3] shrink-0" />
+              <span className="btn-label">+ Add Book</span>
             </button>
           </div>
         </div>
@@ -500,155 +651,206 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
         ) : viewMode === 'grid' ? (
           /* 4-column responsive grid of high-fidelity book cards */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredBooks.map((book) => {
+            {filteredBooks.map((book, idx) => {
               const isAvailable = book.available_quantity > 0;
+              const isLowStock = isAvailable && book.available_quantity <= 2;
               const issuedCount = book.total_quantity - book.available_quantity;
+              const capacityPercent = book.total_quantity > 0 
+                ? Math.min(100, Math.round((issuedCount / book.total_quantity) * 100)) 
+                : 0;
 
               return (
                 <div
                   key={book.id}
-                  className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] hover:border-slate-300 dark:hover:border-slate-700 rounded-xl overflow-hidden shadow-2xs hover:shadow-md flex flex-col justify-between group transition-all duration-200 relative"
+                  style={{ animationDelay: `${Math.min((idx % 12) * 35, 300)}ms` }}
+                  className="book-card-enter rounded-[14px] bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.05)] overflow-hidden flex flex-col justify-between group transition-all duration-200 relative hover:-translate-y-[3px] hover:border-[#BC881B]/50 hover:shadow-[0_10px_28px_rgba(0,0,0,0.5),0_0_16px_rgba(188,136,27,0.2)] h-full"
                 >
                   {/* Card Body */}
-                  <div className="p-4 space-y-3">
-                    {/* Top Row: Thumbnail + Meta info header */}
-                    <div className="flex gap-3">
-                      {/* Book Cover Thumbnail with realistic spine and embossed cover art */}
+                  <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                    {/* Top Section: Thumbnail + Flexible Meta Info Header */}
+                    <div className="flex gap-3.5 items-start">
+                      {/* Book Cover Thumbnail with realistic spine (gold stripe) & ULM PRESS mark only */}
                       <div 
                         onClick={() => onSelectBook(book)}
-                        data-preserve-dark="true"
-                        className="w-20 h-28 shrink-0 rounded-md overflow-hidden bg-slate-800 border border-slate-700/80 shadow-md relative group/cover cursor-pointer flex flex-col justify-between p-1.5"
+                        className="w-[88px] min-h-[124px] shrink-0 rounded-[10px] overflow-hidden bg-[#141214] border border-white/[0.1] shadow-md relative group/cover cursor-pointer flex flex-col justify-between transition-transform duration-200 group-hover:scale-[1.02]"
+                        title={book.book_name}
                       >
+                        {/* Elegant Spine with Gold Stripe & ULM PRESS mark only on the spine */}
+                        <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-[#8C600D] via-[#E0B450] to-[#BC881B] z-10 shadow-sm flex items-center justify-center">
+                          <span className="font-mono text-[7px] text-[#1A1A1A] font-extrabold uppercase tracking-widest -rotate-90 select-none whitespace-nowrap">
+                            ULM PRESS
+                          </span>
+                        </div>
+
                         {book.book_image_path ? (
                           <img
                             src={book.book_image_path}
                             alt={book.book_name}
                             referrerPolicy="no-referrer"
-                            className="absolute inset-0 w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-cover pl-3"
                             onError={(e) => {
-                              // Zero-broken-image fallback to styled CSS cover
+                              // Zero-broken-image fallback to styled cover
                               (e.target as HTMLElement).style.display = 'none';
                             }}
                           />
                         ) : null}
 
-                        {/* Foil embossed spine accent on the left edge */}
-                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-r from-amber-700/60 via-amber-400/80 to-amber-700/40 z-10 shadow-sm" />
-
-                        {/* Geometric styling fallback behind image */}
-                        <div className="relative z-0 h-full flex flex-col justify-between p-1 text-[8px] leading-tight select-none">
-                          <span className="font-mono-code text-[7px] text-amber-300 font-bold uppercase tracking-wider pl-1">
-                            ULM PRESS
-                          </span>
-                          <span data-preserve-white="true" className="font-header text-[8.5px] font-bold text-[#F1F5F9] line-clamp-3 pl-1">
-                            {book.book_name}
-                          </span>
-                          <span className="text-[7px] font-mono-code text-slate-300 pl-1">
-                            {book.dewey_call_number}
-                          </span>
+                        {/* Geometric styling fallback behind image - clean book pattern, NO title or call number printed over it */}
+                        <div className="relative z-0 h-full w-full pl-3 min-h-[124px] flex items-center justify-center bg-gradient-to-br from-[#2B2730] to-[#1A1A1A]">
+                          <BookOpen className="w-6 h-6 text-[#BC881B]/40 stroke-[1.5]" />
                         </div>
                       </div>
 
-                      {/* Header Meta Info */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between">
-                        <div>
+                      {/* Header Meta Info (flexible layout without fixed height clipping) */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between space-y-1.5">
+                        <div className="space-y-1">
+                          {/* Badges row with wrap support */}
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                            <span className="inline-flex items-center text-[11px] font-semibold text-[#6FA8D2] bg-[#29658E]/20 border border-[#29658E]/40 px-2 py-0.5 rounded-[6px] shrink-0">
                               {book.category}
                             </span>
-                            <span className="text-[9.5px] font-mono-code text-slate-500 dark:text-slate-400">
+                            {(book.language === 'Urdu' || isArabicOrUrduScript(book.book_name)) ? (
+                              <span className="inline-flex items-center text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 border border-emerald-700/60 px-2 py-0.5 rounded-[6px] shrink-0">
+                                اردو · Nastaliq
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center text-[11px] font-mono text-[#B3AABD] shrink-0">
+                                {book.language || 'English'}
+                              </span>
+                            )}
+                            <span className="inline-flex items-center text-[11px] font-mono font-semibold text-[#E0B450] bg-[#BC881B]/15 border border-[#BC881B]/30 px-2 py-0.5 rounded-[6px] shrink-0">
                               {book.edition}
                             </span>
                           </div>
 
+                          {/* Clamped 2-line title with tooltip and unclipped Urdu script support */}
                           <h4 
                             onClick={() => onSelectBook(book)}
-                            className="font-header text-sm font-bold text-[#F1F5F9] hover:text-amber-600 dark:hover:text-amber-300 transition-colors mt-1 line-clamp-2 cursor-pointer leading-snug"
+                            dir="auto"
+                            style={{ unicodeBidi: 'plaintext' }}
+                            className={`font-bold text-white hover:text-[#E0B450] transition-colors mt-1 line-clamp-2 cursor-pointer min-h-[38px] ${
+                              isArabicOrUrduScript(book.book_name) ? 'font-urdu text-[15px] leading-[2.1]' : 'text-[14px] leading-snug'
+                            }`}
                             title={book.book_name}
                           >
                             {book.book_name}
                           </h4>
+                          {book.title_roman && (
+                            <p className="text-[11px] text-[#E0B450]/80 font-mono truncate" title={book.title_roman}>
+                              ({book.title_roman})
+                            </p>
+                          )}
 
-                          <p className="text-xs text-slate-600 dark:text-slate-400 truncate mt-0.5">
-                            by <span className="text-slate-800 dark:text-slate-300 font-medium">{book.author}</span>
+                          {/* Single-line author with ellipsis and tooltip */}
+                          <p 
+                            dir="auto"
+                            style={{ unicodeBidi: 'plaintext' }}
+                            className={`text-[12px] text-[#B3AABD] truncate ${
+                              isArabicOrUrduScript(book.author) ? 'font-urdu leading-[2]' : ''
+                            }`}
+                            title={book.author}
+                          >
+                            by <span className="text-white font-medium">{book.author}</span>
+                            {book.author_roman && (
+                              <span className="text-[11px] text-[#B3AABD] font-mono ml-1">· {book.author_roman}</span>
+                            )}
                           </p>
                         </div>
 
-                        {/* Call number & Shelf location */}
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
+                        {/* Call number & Shelf location with pin icon (never hidden behind Added row) */}
+                        <div 
+                          className="text-[12px] text-[#B3AABD] flex items-center gap-1.5 pt-1"
+                          title={`${book.shelf} · Row ${book.row}`}
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-[#29658E] shrink-0" />
                           <span className="truncate">{book.shelf} · Row {book.row}</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Metadata Row: Date Added & Dewey call number */}
-                    <div className="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-[#020617] rounded-lg p-2 border border-slate-200 dark:border-[#1E293B]">
-                      <div className="truncate flex items-center gap-1.5 text-slate-300 font-mono-code">
-                        <Calendar className="w-3 h-3 text-amber-400 shrink-0" />
-                        <span className="text-[10px] text-slate-400">Added:</span>
-                        <span className="text-slate-200 font-medium text-[10.5px]">{formatDisplayDate(book.date_added || book.created_at)}</span>
+                    {/* Metadata Bottom Rows Container (pinned at bottom, equal row heights) */}
+                    <div className="space-y-2 mt-auto pt-1">
+                      {/* Metadata Row: Date Added & Dewey call number */}
+                      <div className="flex items-center justify-between text-[12px] bg-[#141214]/80 rounded-[8px] px-3 py-1.5 border border-white/[0.06] h-[36px]">
+                        <div className="truncate flex items-center gap-1.5 text-[#B3AABD] font-mono">
+                          <Calendar className="w-3.5 h-3.5 text-[#BC881B] shrink-0" />
+                          <span>Added:</span>
+                          <span className="text-white font-medium">{formatDisplayDate(book.date_added || book.created_at)}</span>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <span className="text-[#E0B450] font-mono text-[11px] font-semibold bg-[#BC881B]/15 px-2 py-0.5 rounded-[6px] border border-[#BC881B]/25">
+                            {book.dewey_call_number}
+                          </span>
+                        </div>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <span className="text-amber-700 dark:text-amber-400 font-mono-code text-[10px] font-semibold bg-amber-500/10 px-1.5 py-0.5 rounded">
-                          {book.dewey_call_number}
-                        </span>
+
+                      {/* Barcode Visual Strip & Monospace String */}
+                      <div className="flex items-center justify-between gap-2 bg-[#141214]/80 rounded-[8px] px-3 py-1.5 border border-white/[0.06] h-[36px]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <BarcodeIcon className="w-4 h-4 text-[#B3AABD] shrink-0" />
+                          <span className="font-mono text-[12px] text-white font-semibold tracking-wider truncate">
+                            {book.barcode}
+                          </span>
+                        </div>
+                        <div className="shrink-0">
+                          {renderBarcodeStrip(book.barcode)}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Barcode Visual Strip & Monospace String */}
-                    <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-[#020617] rounded-lg px-2.5 py-1.5 border border-slate-200 dark:border-[#1E293B]">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <BarcodeIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="font-mono-code text-[11px] text-slate-800 dark:text-slate-200 tracking-wider truncate font-semibold">
-                          {book.barcode}
-                        </span>
-                      </div>
-                      <div className="shrink-0">
-                        {renderBarcodeStrip(book.barcode)}
-                      </div>
-                    </div>
-
-                    {/* Status Pill */}
-                    <div className="flex items-center justify-between pt-0.5">
-                      {isAvailable ? (
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>Available ({book.available_quantity} copies)</span>
+                    {/* Availability Status & Capacity Bar (equal height) */}
+                    <div className="flex items-center justify-between h-[36px] pt-0.5">
+                      {!isAvailable ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[12px] font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                          <span>Unavailable (0 copies)</span>
+                        </div>
+                      ) : isLowStock ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[12px] font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          <span>Low Stock ({book.available_quantity} copies)</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-400 text-xs font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                          <span>All Copies Loaned</span>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[12px] font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Available ({book.available_quantity} copies)</span>
                         </div>
                       )}
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono-code tabular-nums">
-                        {issuedCount} issued / {book.total_quantity} tot
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[12px] text-[#B3AABD] font-mono tabular-nums">
+                          {issuedCount} issued / {book.total_quantity} total
+                        </span>
+                        <div className="w-20 bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-[#BC881B] rounded-full transition-all duration-300" 
+                            style={{ width: `${capacityPercent}%` }} 
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   {/* Card Action Footer */}
-                  <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-[#020617]/70 border-t border-slate-200 dark:border-[#1E293B] flex items-center justify-between gap-2">
+                  <div className="px-3.5 py-2.5 bg-[#141214]/60 border-t border-white/[0.06] flex items-center justify-between gap-2 h-[52px]">
                     {/* Quick Loan Button */}
                     <button
                       onClick={() => onQuickLoan(book)}
                       disabled={!isAvailable}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                      className={`flex-1 h-9 min-h-[36px] flex items-center justify-center gap-2 py-1.5 px-3 rounded-[10px] text-[12px] font-bold transition-all duration-150 border cursor-pointer ${
                         isAvailable
-                          ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/30'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed'
-                      }`}
+                          ? 'border-[#BC881B] bg-[#BC881B]/15 text-[#E0B450] hover:bg-[#BC881B] hover:text-[#1A1A1A] hover:shadow-[0_2px_12px_rgba(188,136,27,0.35)] active:scale-95'
+                          : 'border-transparent bg-[#2B1538] text-[#8B719B] cursor-not-allowed pointer-events-none'
+                      } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E0B450]`}
                       title={isAvailable ? 'Quickly issue a copy of this book' : 'No available copies left on shelf'}
                     >
-                      <ArrowRightLeft className="w-3 h-3" />
-                      <span>Quick Loan</span>
+                      <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" />
+                      <span className="btn-label">Quick Loan</span>
                     </button>
 
                     {/* Edit Button */}
                     <button
                       onClick={() => onEditBook(book)}
-                      className="p-1.5 rounded-lg bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-[#1E293B] text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-[#F1F5F9] border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
+                      className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#141214] border border-white/[0.08] text-[#B3AABD] hover:text-[#E0B450] hover:border-[#BC881B]/40 hover:bg-[#BC881B]/10 transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] cursor-pointer"
                       title="Edit book details & inventory quantities"
                       aria-label="Edit book details"
                     >
@@ -658,17 +860,17 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                     {/* Barcode Print Button */}
                     <button
                       onClick={() => onPrintBarcode(book)}
-                      className="p-1.5 rounded-lg bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-[#1E293B] text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-300 border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
+                      className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#141214] border border-white/[0.08] text-[#B3AABD] hover:text-[#E0B450] hover:border-[#BC881B]/40 hover:bg-[#BC881B]/10 transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] cursor-pointer"
                       title="Print official barcode sticker with campus insignia"
                       aria-label="Print official barcode sticker"
                     >
                       <Printer className="w-3.5 h-3.5" />
                     </button>
 
-                    {/* Delete Book Button */}
+                    {/* Delete Book Button (turns red on hover) */}
                     <button
                       onClick={() => onDeleteBook(book)}
-                      className="p-1.5 rounded-lg bg-[#0F172A] hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-[#334155] hover:border-rose-300 dark:hover:border-rose-900 transition-colors cursor-pointer"
+                      className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#141214] border border-white/[0.08] text-[#B3AABD] hover:text-rose-400 hover:border-rose-500/40 hover:bg-rose-500/10 transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] cursor-pointer"
                       title="Delete or archive book"
                       aria-label="Delete book"
                     >
@@ -678,7 +880,7 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                     {/* Details modal trigger */}
                     <button
                       onClick={() => onSelectBook(book)}
-                      className="p-1.5 rounded-lg bg-[#0F172A] hover:bg-slate-100 dark:hover:bg-[#1E293B] text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-300 border border-slate-200 dark:border-[#334155] transition-colors cursor-pointer"
+                      className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#141214] border border-white/[0.08] text-[#B3AABD] hover:text-[#6FA8D2] hover:border-[#29658E]/40 hover:bg-[#29658E]/10 transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] cursor-pointer"
                       title="Full book specification & history"
                       aria-label="Full book specification & history"
                     >
@@ -698,7 +900,24 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                   <tr>
                     <th className="py-3 px-4">Book Title & Author</th>
                     <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Language</th>
                     <th className="py-3 px-4">Barcode / Call No</th>
+                    <th 
+                      onClick={handleToggleDateSort}
+                      className="py-3 px-4 cursor-pointer hover:text-amber-300 transition-colors select-none"
+                      title="Click to toggle sorting by Date Added"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Date Added</span>
+                        {sortBy === 'newest_added' ? (
+                          <ArrowDown className="w-3 h-3 text-amber-400" />
+                        ) : sortBy === 'oldest_added' ? (
+                          <ArrowUp className="w-3 h-3 text-amber-400" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                        )}
+                      </div>
+                    </th>
                     <th className="py-3 px-4 text-center">Total</th>
                     <th className="py-3 px-4 text-center">Available</th>
                     <th className="py-3 px-4 text-center">Issued</th>
@@ -710,9 +929,10 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                   {filteredBooks.map((book) => {
                     const isAvailable = book.available_quantity > 0;
                     const issued = book.total_quantity - book.available_quantity;
+                    const isUrduBook = book.language === 'Urdu' || isArabicOrUrduScript(book.book_name);
 
                     return (
-                      <tr key={book.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <tr key={book.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors min-h-[48px] h-[52px]">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-7 h-9 rounded bg-slate-800 border border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-cinzel text-[8px] text-amber-300 font-bold">
@@ -721,11 +941,34 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                             <div className="min-w-0">
                               <p 
                                 onClick={() => onSelectBook(book)}
-                                className="font-semibold text-[#F1F5F9] hover:text-amber-600 dark:hover:text-amber-300 cursor-pointer truncate max-w-xs md:max-w-md"
+                                dir="auto"
+                                style={{ unicodeBidi: 'plaintext' }}
+                                className={`font-semibold text-[#F1F5F9] hover:text-amber-600 dark:hover:text-amber-300 cursor-pointer truncate max-w-xs md:max-w-md ${
+                                  isArabicOrUrduScript(book.book_name) ? 'font-urdu text-[15px] leading-[2.1]' : ''
+                                }`}
+                                title={book.book_name}
                               >
                                 {book.book_name}
+                                {book.title_roman && (
+                                  <span className="text-[10px] text-amber-400/90 font-mono ml-2 font-normal">
+                                    ({book.title_roman})
+                                  </span>
+                                )}
                               </p>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">{book.author}</p>
+                              <p 
+                                dir="auto"
+                                style={{ unicodeBidi: 'plaintext' }}
+                                className={`text-[11px] text-slate-400 mt-0.5 truncate ${
+                                  isArabicOrUrduScript(book.author) ? 'font-urdu leading-[2]' : ''
+                                }`}
+                              >
+                                {book.author}
+                                {book.author_roman && (
+                                  <span className="text-[10px] text-slate-500 font-mono ml-1.5">
+                                    · {book.author_roman}
+                                  </span>
+                                )}
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -734,9 +977,23 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                             {book.category}
                           </span>
                         </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {isUrduBook ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950/70 text-emerald-300 border border-emerald-800">
+                              اردو · Nastaliq
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                              {book.language || 'English'}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3 px-4 font-mono-code">
                           <p className="text-[#F1F5F9] font-medium">{book.barcode}</p>
                           <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">{book.dewey_call_number}</p>
+                        </td>
+                        <td className="py-3 px-4 font-mono-code text-[11px] text-slate-300 whitespace-nowrap">
+                          {formatDisplayDate(book.date_added || book.created_at)}
                         </td>
                         <td className="py-3 px-4 text-center font-mono-code tabular-nums font-semibold text-slate-700 dark:text-slate-300">
                           {book.total_quantity}

@@ -29,8 +29,11 @@ import {
 } from 'lucide-react';
 import { Book } from '../../types/library';
 import { LibraryStorage } from '../../services/storage';
+import { BarcodeService } from '../../services/barcodeService';
+import { BookSheetService } from '../../services/bookSheetService';
 import CustomSelect from '../ui/CustomSelect';
 import { getTodayIso, formatDisplayDate, normalizeDateAdded } from '../../utils/dateUtils';
+import { isArabicOrUrduScript, sanitizeBidiOverrides } from '../../utils/urduUtils';
 
 interface AddEditBookModalProps {
   isOpen: boolean;
@@ -90,6 +93,8 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
 }) => {
   // Official Accession Register Fields in Paper Sequence
   const [accessionNo, setAccessionNo] = useState<string>('10021');
+  const [accessionNotice, setAccessionNotice] = useState<string | null>(null);
+  const [accessionError, setAccessionError] = useState<string | null>(null);
   const [barcode, setBarcode] = useState<string>('ULM-10021');
   const [author, setAuthor] = useState<string>('');
   const [bookName, setBookName] = useState<string>('');
@@ -115,6 +120,8 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   const [row, setRow] = useState<string>('A-1');
   const [section, setSection] = useState<string>('Main Stacks');
   const [language, setLanguage] = useState<string>('English');
+  const [titleRoman, setTitleRoman] = useState<string>('');
+  const [authorRoman, setAuthorRoman] = useState<string>('');
   const [description, setDescription] = useState<string>('');
 
   // Media & Inventory
@@ -170,7 +177,9 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setCategory(bookToEdit.category || 'Computer Science');
       setEdition(bookToEdit.edition || '1st Edition');
       setPublicationYear(bookToEdit.publication_year || 2024);
-      setLanguage(bookToEdit.language || 'English');
+      setLanguage(bookToEdit.language || (isArabicOrUrduScript(bookToEdit.book_name) ? 'Urdu' : 'English'));
+      setTitleRoman(bookToEdit.title_roman || '');
+      setAuthorRoman(bookToEdit.author_roman || '');
       setDescription(bookToEdit.description || '');
       setBookImagePath(bookToEdit.book_image_path || '');
       setTotalQuantity(bookToEdit.total_quantity || 1);
@@ -183,18 +192,10 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setDateAdded(editDate);
       setDateAddedRaw(formatDisplayDate(editDate));
     } else {
-      // New book: Suggest next accession number
-      const maxAcc = allBooks.reduce((max, b) => {
-        const match = b.barcode.match(/\d+/);
-        if (match) {
-          const n = parseInt(match[0], 10);
-          return n > max ? n : max;
-        }
-        return max;
-      }, 10020);
-
-      const nextAcc = maxAcc + 1;
-      const formattedBarcode = initialBarcode || `ULM-${String(nextAcc).padStart(5, '0')}`;
+      // New book: Pre-fill automatic accession number per specification
+      const nextAccInfo = BookSheetService.getNextAccessionNumber();
+      const nextAcc = nextAccInfo.accessionNo;
+      const formattedBarcode = initialBarcode || BarcodeService.generateBarcode(nextAcc).barcode;
 
       // Check last entry memory from localStorage for rapid fast ledger entry
       const lastEntryStr = localStorage.getItem('ulm_lms_last_entry_cache');
@@ -307,12 +308,27 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
     }
   }, [isbn, bookToEdit]);
 
-  // Sync accession number change with barcode
+  // Sync accession number change with automatic barcode and validation (Section 2)
   const handleAccessionChange = (val: string) => {
     setAccessionNo(val);
-    const num = parseInt(val, 10);
-    if (!isNaN(num) && num > 0) {
-      setBarcode(`ULM-${String(num).padStart(5, '0')}`);
+    if (val.trim()) {
+      const gen = BarcodeService.generateBarcode(val);
+      setBarcode(gen.barcode);
+      const validation = BookSheetService.validateAccessionNumber(val, bookToEdit?.id);
+      if (!validation.valid) {
+        setAccessionError(validation.message || 'Duplicate accession number blocked.');
+        setAccessionNotice(null);
+      } else {
+        setAccessionError(null);
+        if (validation.message) {
+          setAccessionNotice(validation.message);
+        } else {
+          setAccessionNotice(null);
+        }
+      }
+    } else {
+      setAccessionError('Accession number is required.');
+      setAccessionNotice(null);
     }
   };
 
@@ -424,6 +440,10 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setErrorMessage('Barcode / Accession is mandatory.');
       return;
     }
+    if (accessionError) {
+      setErrorMessage(accessionError);
+      return;
+    }
 
     const dateRes = normalizeDateAdded(dateAddedRaw || dateAdded);
     if (!dateRes.valid) {
@@ -438,14 +458,22 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
     // Build payload conforming exactly to Book schema
     const payload = {
       barcode: barcode.trim(),
+      accession_no: accessionNo.trim(),
       isbn: isbn.trim(),
       book_name: bookName.trim(),
       author: author.trim() || 'Anonymous / Organization',
       publisher: publisher.trim(),
+      place: place.trim(),
+      binding: binding,
+      pages: Number(pages) || 0,
+      price: (Number(priceRs) || 0) + ((Number(pricePs) || 0) / 100),
+      source_remarks: sourceRemarks.trim(),
       category: category,
       edition: edition.trim(),
       publication_year: Number(publicationYear) || 2024,
-      language: language,
+      language: language || (isArabicOrUrduScript(bookName) ? 'Urdu' : 'English'),
+      title_roman: titleRoman.trim() || undefined,
+      author_roman: authorRoman.trim() || undefined,
       description: description.trim(),
       book_image_path: bookImagePath.trim(),
       total_quantity: Number(totalQuantity) || 1,
@@ -494,12 +522,15 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
     if (isNext && !bookToEdit) {
       // Fast entry next: increment accession, clear title & author, focus title
       setTimeout(() => {
-        const nextNum = parseInt(accessionNo, 10) + 1;
-        setAccessionNo(String(nextNum));
-        setBarcode(`ULM-${String(nextNum).padStart(5, '0')}`);
+        const nextAccInfo = BookSheetService.getNextAccessionNumber();
+        const nextAcc = nextAccInfo.accessionNo;
+        setAccessionNo(nextAcc);
+        setBarcode(BarcodeService.generateBarcode(nextAcc).barcode);
+        setAccessionNotice(null);
+        setAccessionError(null);
         setBookName('');
         setAuthor('');
-        setIsbn(`978-0-${String(nextNum).slice(-4)}-101-2`);
+        setIsbn(`978-0-${String(nextAcc).slice(-4)}-101-2`);
         setSaveState('idle');
         setErrorMessage(null);
         titleInputRef.current?.focus();
@@ -632,28 +663,49 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                       value={accessionNo}
                       onChange={(e) => handleAccessionChange(e.target.value)}
                       placeholder="e.g. 10021"
-                      className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-sm font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                      className={`w-full bg-[#020617] border rounded-lg px-3 py-2 text-sm font-mono font-bold focus:outline-none focus:ring-1 ${
+                        accessionError
+                          ? 'border-rose-500 text-rose-300 focus:border-rose-500 focus:ring-rose-500'
+                          : 'border-[#334155] text-amber-400 focus:border-amber-400 focus:ring-amber-400'
+                      }`}
                     />
                     <Hash className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-3 pointer-events-none" />
                   </div>
+                  {accessionError && (
+                    <p className="text-[11px] text-rose-400 font-medium animate-in fade-in flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      <span>{accessionError}</span>
+                    </p>
+                  )}
+                  {accessionNotice && !accessionError && (
+                    <p className="text-[11px] text-amber-400/90 font-medium animate-in fade-in flex items-center gap-1">
+                      <Info className="w-3 h-3 shrink-0" />
+                      <span>{accessionNotice}</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* Barcode (Auto-derived from Accession No) */}
                 <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                    <span>Physical Barcode</span>
-                    <span className="text-slate-500 text-[10px]">(Code-128)</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1">
+                      <span>Physical Barcode</span>
+                      <span className="text-slate-500 text-[10px]">(Code-128)</span>
+                    </label>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#BC881B]/20 text-[#E0B450] border border-[#BC881B]/30">
+                      AUTO
+                    </span>
+                  </div>
                   <div className="relative">
                     <input
                       type="text"
-                      tabIndex={2}
+                      readOnly
+                      tabIndex={-1}
                       value={barcode}
-                      onChange={(e) => setBarcode(e.target.value)}
                       placeholder="ULM-00000"
-                      className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-sm font-mono text-slate-200 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                      className="w-full bg-[#141214] border border-white/10 rounded-lg px-3 py-2 text-sm font-mono font-bold text-[#E0B450] cursor-not-allowed select-all"
                     />
-                    <BarcodeIcon className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-3 pointer-events-none" />
+                    <BarcodeIcon className="w-3.5 h-3.5 text-[#B3AABD] absolute right-3 top-3 pointer-events-none" />
                   </div>
                 </div>
 
@@ -677,11 +729,15 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   <input
                     type="text"
                     tabIndex={3}
+                    dir="auto"
+                    style={{ unicodeBidi: 'plaintext' }}
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
-                    placeholder="e.g. Thomas H. Cormen, Charles E. Leiserson"
+                    placeholder="e.g. Thomas H. Cormen or علامہ محمد اقبال"
                     list="authors-list"
-                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                    className={`w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 ${
+                      isArabicOrUrduScript(author) ? 'font-urdu text-base leading-[2.1]' : ''
+                    }`}
                   />
                   <datalist id="authors-list">
                     {authorSuggestions.map((a, i) => (
@@ -691,26 +747,92 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                 </div>
 
                 {/* 3. Title of the Book (Full Width Focus Field) */}
-                <div className="md:col-span-12 space-y-1.5 pt-1">
+                <div className="md:col-span-8 space-y-1.5 pt-1">
                   <label className="text-xs font-semibold text-slate-200 flex items-center justify-between">
                     <span className="flex items-center gap-1">
                       <span>3. Title of the Book</span>
                       <span className="text-rose-400 font-bold">*</span>
                     </span>
                     <span className="text-[11px] font-mono text-slate-500">
-                      Standard English or Romanized Title
+                      English or Nastaliq Urdu (Auto-Aligns RTL/LTR)
                     </span>
                   </label>
                   <input
                     ref={titleInputRef}
                     type="text"
                     tabIndex={4}
+                    dir="auto"
+                    style={{ unicodeBidi: 'plaintext' }}
                     value={bookName}
-                    onChange={(e) => setBookName(e.target.value)}
-                    placeholder="e.g. Introduction to Algorithms (Third Edition)"
-                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3.5 py-2.5 text-base font-semibold text-[#F1F5F9] placeholder:text-slate-600 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/25"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setBookName(v);
+                      if (isArabicOrUrduScript(v) && language === 'English') {
+                        setLanguage('Urdu');
+                      }
+                    }}
+                    placeholder="e.g. Introduction to Algorithms or بانگِ درا"
+                    className={`w-full bg-[#020617] border border-[#334155] rounded-lg px-3.5 py-2.5 text-base font-semibold text-[#F1F5F9] placeholder:text-slate-600 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/25 ${
+                      isArabicOrUrduScript(bookName) ? 'font-urdu text-lg leading-[2.1]' : ''
+                    }`}
                   />
                 </div>
+
+                {/* Language Selector */}
+                <div className="md:col-span-4 space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-slate-200 flex items-center justify-between">
+                    <span>Language / زبان</span>
+                    {language === 'Urdu' && (
+                      <span className="text-[10px] font-medium text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800">
+                        Nastaliq Active
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2.5 text-sm text-[#F1F5F9] focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/25"
+                  >
+                    <option value="English">English</option>
+                    <option value="Urdu">Urdu (اردو)</option>
+                    <option value="Arabic">Arabic (العربية)</option>
+                    <option value="Pashto">Pashto (پښتو)</option>
+                    <option value="Persian">Persian (فارسی)</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                {/* Optional Romanized Fields (Displayed for Urdu or when activated) */}
+                {(language === 'Urdu' || isArabicOrUrduScript(bookName) || isArabicOrUrduScript(author) || titleRoman || authorRoman) && (
+                  <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-lg bg-amber-950/20 border border-amber-800/40">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-amber-300 flex items-center justify-between">
+                        <span>Title (Roman Urdu / Phonetic Search)</span>
+                        <span className="text-[10px] text-amber-400/70">Optional</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={titleRoman}
+                        onChange={(e) => setTitleRoman(e.target.value)}
+                        placeholder="e.g. Bang-e-Dra or Kulliyat-e-Mir"
+                        className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-amber-300 flex items-center justify-between">
+                        <span>Author (Roman Urdu / Phonetic Search)</span>
+                        <span className="text-[10px] text-amber-400/70">Optional</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={authorRoman}
+                        onChange={(e) => setAuthorRoman(e.target.value)}
+                        placeholder="e.g. Allama Iqbal or Mir Taqi Mir"
+                        className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -762,11 +884,15 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   <input
                     type="text"
                     tabIndex={6}
+                    dir="auto"
+                    style={{ unicodeBidi: 'plaintext' }}
                     value={place}
                     onChange={(e) => setPlace(e.target.value)}
-                    placeholder="e.g. Cambridge, MA"
+                    placeholder="e.g. Cambridge, MA or لاہور"
                     list="places-list"
-                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+                    className={`w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400 ${
+                      isArabicOrUrduScript(place) ? 'font-urdu leading-[2]' : ''
+                    }`}
                   />
                   <datalist id="places-list">
                     {placeSuggestions.map((p, i) => (
@@ -793,11 +919,15 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   <input
                     type="text"
                     tabIndex={7}
+                    dir="auto"
+                    style={{ unicodeBidi: 'plaintext' }}
                     value={publisher}
                     onChange={(e) => setPublisher(e.target.value)}
-                    placeholder="e.g. MIT Press"
+                    placeholder="e.g. MIT Press or اقبال اکادمی"
                     list="publishers-list"
-                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+                    className={`w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400 ${
+                      isArabicOrUrduScript(publisher) ? 'font-urdu leading-[2]' : ''
+                    }`}
                   />
                   <datalist id="publishers-list">
                     {publisherSuggestions.map((p, i) => (
@@ -973,10 +1103,14 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   <input
                     type="text"
                     tabIndex={15}
+                    dir="auto"
+                    style={{ unicodeBidi: 'plaintext' }}
                     value={sourceRemarks}
                     onChange={(e) => setSourceRemarks(e.target.value)}
-                    placeholder="e.g. University Purchase, HEC Grant"
-                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+                    placeholder="e.g. University Purchase, HEC Grant or عطیہ برائے لائبریری"
+                    className={`w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400 ${
+                      isArabicOrUrduScript(sourceRemarks) ? 'font-urdu leading-[2]' : ''
+                    }`}
                   />
                 </div>
 

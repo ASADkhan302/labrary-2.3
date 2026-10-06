@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WindowsTitleBar } from './components/WindowsTitleBar';
 import { PrimaryHeader } from './components/PrimaryHeader';
 import { BooksCatalogView } from './components/BooksCatalogView';
@@ -11,11 +11,8 @@ import { CirculationDeskView } from './components/CirculationDeskView';
 import { BorrowersView } from './components/BorrowersView';
 import { ReportsView } from './components/ReportsView';
 import { BarcodeScannerView } from './components/BarcodeScannerView';
-import { SqliteDataLayerView } from './components/SqliteDataLayerView';
-import { CppNativeView } from './components/CppNativeView';
 import { ExcelCenterView } from './components/ExcelCenterView';
 import { SettingsView } from './components/SettingsView';
-import { StateGalleryView } from './components/StateGalleryView';
 import { LmsSidebar } from './components/LmsSidebar';
 import { AppOpeningSplash } from './components/AppOpeningSplash';
 import { ToastSuccessDeco } from './components/decorative/ToastSuccessDeco';
@@ -27,14 +24,39 @@ import { BarcodePrintModal } from './components/modals/BarcodePrintModal';
 import { DeleteBookConfirmModal } from './components/modals/DeleteBookConfirmModal';
 import { DeleteBorrowerConfirmModal } from './components/modals/DeleteBorrowerConfirmModal';
 import { StorageLocationModal } from './components/modals/StorageLocationModal';
+import { BookImportModal } from './components/modals/BookImportModal';
+import { BatchLabelPrintModal } from './components/modals/BatchLabelPrintModal';
+import { DataFilesDiffModal } from './components/modals/DataFilesDiffModal';
+import { WelcomeLibraryModal } from './components/modals/WelcomeLibraryModal';
 
 import { Book, Borrower, BorrowerStatus, Transaction, HistoryEntry, SystemSettings, NavigationTab, StorageLocationConfig } from './types/library';
 import { LibraryStorage } from './services/storage';
+import { SharedCountService } from './services/sharedCountService';
 import { playSuccessBarcodeBeep, playClickSound, playErrorBeep } from './services/audio';
+import { LibraryDataFilesService, ExternalChangesSummary } from './services/libraryDataFilesService';
+import { BarcodeService } from './services/barcodeService';
+import { BookSheetService } from './services/bookSheetService';
+import { LibraryFolderService } from './services/libraryFolderService';
 
 export default function App() {
-  // Navigation
-  const [activeTab, setActiveTab] = useState<NavigationTab>('catalog');
+  // Valid navigation tabs (developer screens removed)
+  const VALID_TABS: NavigationTab[] = ['catalog', 'circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings'];
+
+  // Navigation (if a removed screen was previously saved as last visited view, fallback to catalog)
+  const [activeTab, setActiveTab] = useState<NavigationTab>(() => {
+    try {
+      const savedTab = localStorage.getItem('ulm_lms_last_tab') || localStorage.getItem('ulm_lms_active_view');
+      if (savedTab && (savedTab === 'sqlite' || savedTab === 'cpp_native')) {
+        localStorage.removeItem('ulm_lms_last_tab');
+        localStorage.removeItem('ulm_lms_active_view');
+        return 'catalog';
+      }
+      if (savedTab && ['catalog', 'circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings'].includes(savedTab)) {
+        return savedTab as NavigationTab;
+      }
+    } catch {}
+    return 'catalog';
+  });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -57,13 +79,46 @@ export default function App() {
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
   const [borrowerToDelete, setBorrowerToDelete] = useState<Borrower | null>(null);
 
+  // Book Entry Sheet Import & Barcode Batch Print Modals
+  const [isBookImportOpen, setIsBookImportOpen] = useState(false);
+  const [isBatchLabelPrintOpen, setIsBatchLabelPrintOpen] = useState(false);
+  const [batchPrintBookIds, setBatchPrintBookIds] = useState<string[]>([]);
+  const [dataFileDiffSummary, setDataFileDiffSummary] = useState<ExternalChangesSummary | null>(null);
+  const [isDataFileDiffOpen, setIsDataFileDiffOpen] = useState(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [isMissingLibrary, setIsMissingLibrary] = useState(false);
+  const [missingLibraryPath, setMissingLibraryPath] = useState('');
+
   // Database Storage Location State (Configurable on startup and anytime)
   const [storageConfig, setStorageConfig] = useState<StorageLocationConfig>(() => LibraryStorage.getStorageLocation());
   const [isStorageModalOpen, setIsStorageModalOpen] = useState<boolean>(false);
+  const [waitingSheetCount, setWaitingSheetCount] = useState<number>(0);
 
   // App opening animation state
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [isAppEntered, setIsAppEntered] = useState<boolean>(false);
+
+  // Initialize BookSheetService and monitor waiting items
+  useEffect(() => {
+    BookSheetService.init();
+    const updateCount = () => {
+      const q = BookSheetService.getQueue();
+      setWaitingSheetCount(q.filter(i => i.status === 'waiting').length);
+    };
+    updateCount();
+    const interval = setInterval(updateCount, 2500);
+
+    // Auto-refresh data files on app close (beforeunload)
+    const handleBeforeUnload = () => {
+      LibraryFolderService.refreshDataFiles(true).catch(() => {});
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   // Sync document.title with institutional credentials
   useEffect(() => {
@@ -72,14 +127,30 @@ export default function App() {
     }
   }, [settings.university_name, settings.library_name]);
 
-  const handleSplashComplete = useCallback(() => {
+  const handleSplashComplete = useCallback(async () => {
     setShowSplash(false);
     setIsAppEntered(true);
-    const loc = LibraryStorage.getStorageLocation();
-    if (!loc.isConfigured || loc.askOnStartup) {
-      setIsStorageModalOpen(true);
+
+    const folderStatus = await LibraryFolderService.init();
+    if (folderStatus.status === 'first_run') {
+      setIsMissingLibrary(false);
+      setIsWelcomeModalOpen(true);
+    } else if (folderStatus.status === 'missing') {
+      setIsMissingLibrary(true);
+      setMissingLibraryPath(folderStatus.folderPath);
+      setIsWelcomeModalOpen(true);
+    } else {
+      const loc = LibraryStorage.getStorageLocation();
+      setStorageConfig(loc);
     }
   }, []);
+
+  const handleRetrySheetSync = async () => {
+    const res = await BookSheetService.processQueue();
+    const q = BookSheetService.getQueue();
+    setWaitingSheetCount(q.filter(i => i.status === 'waiting').length);
+    showToast(res.message);
+  };
 
   const handleStorageLocationSaved = (config: StorageLocationConfig) => {
     setStorageConfig(config);
@@ -94,18 +165,19 @@ export default function App() {
 
   // Screen switch transition: outgoing screen fades out slightly (120ms), incoming screen enters with subtle 6px upward slide and fade (200ms)
   const [isScreenExiting, setIsScreenExiting] = useState(false);
-  const handleTabChange = useCallback((newTab: NavigationTab) => {
-    if (newTab === activeTab) return;
+  const handleTabChange = useCallback((newTab: NavigationTab | string) => {
+    const targetTab: NavigationTab = VALID_TABS.includes(newTab as NavigationTab) ? (newTab as NavigationTab) : 'catalog';
+    if (targetTab === activeTab) return;
     setIsNavigating(true);
     setIsScreenExiting(true);
     setTimeout(() => {
-      setActiveTab(newTab);
+      setActiveTab(targetTab);
       setIsScreenExiting(false);
       setTimeout(() => {
         setIsNavigating(false);
       }, 200);
     }, 120);
-  }, [activeTab]);
+  }, [activeTab, VALID_TABS]);
 
   // Status toast with slide in (200ms), pause on hover, slide out right (150ms)
   const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
@@ -368,11 +440,14 @@ export default function App() {
     showToast(res.message);
   };
 
-  // Count active loans
-  const todayStr = new Date().toISOString().split('T')[0];
-  const activeLoansCount = transactions.filter(t => t.status === 'ACTIVE' && t.due_date >= todayStr).length;
-  const totalBooksCount = books.filter(b => b.is_active).length;
-  const totalBorrowersCount = borrowers.filter(b => b.is_active).length;
+  // Shared aggregate counts
+  const sharedCounts = useMemo(() => {
+    return SharedCountService.computeCounts(books, borrowers, transactions);
+  }, [books, borrowers, transactions]);
+
+  const activeLoansCount = sharedCounts.activeLoans;
+  const totalBooksCount = sharedCounts.totalTitles;
+  const totalBorrowersCount = sharedCounts.totalRegisteredBorrowers;
 
   const selectedBorrowerObj = selectedBorrowerIdForDetails 
     ? borrowers.find(b => b.id === selectedBorrowerIdForDetails) || null
@@ -415,10 +490,12 @@ export default function App() {
         onOpenSearch={() => setIsSearchOpen(true)}
         universityName={settings.university_name}
         libraryName={settings.library_name}
+        waitingBooksCount={waitingSheetCount}
+        onRetrySheetSync={handleRetrySheetSync}
       />
 
       {/* MAIN LAYOUT: SIDEBAR + WORKSPACE */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* Navigation Sidebar (Slides in from the left on app entry) */}
         <div className={`h-full ${isAppEntered ? 'animate-slide-right' : ''}`}>
           <LmsSidebar
@@ -439,13 +516,17 @@ export default function App() {
         </div>
 
         {/* WORKSPACE VIEW (Screen switch: 120ms fade out, 200ms 6px upward slide and fade) */}
-        <main 
-          key={activeTab}
-          className={`flex-1 flex flex-col overflow-hidden relative ${
-            isScreenExiting ? 'screen-view-exit' : 'screen-view-enter'
-          }`}
-        >
-        {activeTab === 'catalog' && (
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 relative overflow-hidden">
+          {/* Static ULM Crest Watermark Layer */}
+          <div className="watermark pointer-events-none" aria-hidden="true" />
+
+          <main 
+            key={activeTab}
+            className={`flex-1 flex flex-col min-h-0 min-w-0 overflow-y-auto overflow-x-hidden relative overscroll-y-contain ${
+              isScreenExiting ? 'screen-view-exit' : 'screen-view-enter'
+            }`}
+          >
+        {(activeTab === 'catalog' || !['circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings'].includes(activeTab)) && (
           <BooksCatalogView
             books={books}
             transactions={transactions}
@@ -464,6 +545,11 @@ export default function App() {
               setIsAddEditOpen(true);
             }}
             onPrintBarcode={(book) => setBookForPrint(book)}
+            onOpenImportBookEntrySheet={() => setIsBookImportOpen(true)}
+            onOpenBatchLabelPrint={() => {
+              setBatchPrintBookIds([]);
+              setIsBatchLabelPrintOpen(true);
+            }}
           />
         )}
 
@@ -532,14 +618,6 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'sqlite' && (
-          <SqliteDataLayerView />
-        )}
-
-        {activeTab === 'cpp_native' && (
-          <CppNativeView />
-        )}
-
         {activeTab === 'excel' && (
           <ExcelCenterView
             books={books}
@@ -547,11 +625,9 @@ export default function App() {
             transactions={transactions}
             history={history}
             onRefreshData={reloadData}
+            onOpenImportEntrySheet={() => setIsBookImportOpen(true)}
+            onOpenTransferZipModal={() => setIsWelcomeModalOpen(true)}
           />
-        )}
-
-        {activeTab === 'gallery' && (
-          <StateGalleryView />
         )}
 
         {activeTab === 'settings' && (
@@ -563,11 +639,17 @@ export default function App() {
             }}
             onResetDemoData={handleResetDemoData}
             onClearDemoData={handleClearDemoData}
+            onResetToZeroComplete={() => {
+              reloadData();
+              showToast('Library reset to zero. Pre-reset backup saved.');
+            }}
             onPlayBootAnimation={handleReplaySplash}
             onOpenStorageModal={() => setIsStorageModalOpen(true)}
+            onOpenWelcomeModal={() => setIsWelcomeModalOpen(true)}
           />
         )}
         </main>
+        </div>
       </div>
 
       {/* MODALS */}
@@ -663,6 +745,74 @@ export default function App() {
         isOpen={isStorageModalOpen}
         onClose={() => setIsStorageModalOpen(false)}
         onLocationSaved={handleStorageLocationSaved}
+      />
+
+      {/* Book Entry Sheet Import Engine Modal */}
+      <BookImportModal
+        isOpen={isBookImportOpen}
+        onClose={() => setIsBookImportOpen(false)}
+        onImportComplete={(batchId, count, bookIds) => {
+          reloadData();
+          setIsBookImportOpen(false);
+          showToast(`Successfully imported ${count} books from entry sheet.`);
+          if (bookIds && bookIds.length > 0) {
+            setBatchPrintBookIds(bookIds);
+            setIsBatchLabelPrintOpen(true);
+          }
+        }}
+        onOpenLabelBatchPrint={(bookIds) => {
+          setBatchPrintBookIds(bookIds);
+          setIsBatchLabelPrintOpen(true);
+        }}
+      />
+
+      {/* Batch Thermal Barcode Label Print Modal */}
+      <BatchLabelPrintModal
+        isOpen={isBatchLabelPrintOpen}
+        bookIds={batchPrintBookIds.length > 0 ? batchPrintBookIds : undefined}
+        books={batchPrintBookIds.length === 0 ? books.filter(b => b.is_active) : undefined}
+        onClose={() => {
+          setIsBatchLabelPrintOpen(false);
+          setBatchPrintBookIds([]);
+        }}
+      />
+
+      {/* External Library Data Files Diff Modal */}
+      <DataFilesDiffModal
+        isOpen={isDataFileDiffOpen}
+        summary={dataFileDiffSummary}
+        onImportChanges={(applyDeletions, preferredSource) => {
+          reloadData();
+          setIsDataFileDiffOpen(false);
+          setDataFileDiffSummary(null);
+          showToast('External changes incorporated into local catalog.');
+        }}
+        onIgnoreAndRewrite={() => {
+          LibraryDataFilesService.writeLibraryDataFiles().then(() => {
+            setIsDataFileDiffOpen(false);
+            setDataFileDiffSummary(null);
+            showToast('Rewrote data files with active library catalog.');
+          });
+        }}
+        onClose={() => {
+          setIsDataFileDiffOpen(false);
+          setDataFileDiffSummary(null);
+        }}
+      />
+
+      {/* First-Time Welcome & Start Screen Modal */}
+      <WelcomeLibraryModal
+        isOpen={isWelcomeModalOpen}
+        isMissingPath={isMissingLibrary}
+        missingPath={missingLibraryPath}
+        onClose={() => {
+          setIsWelcomeModalOpen(false);
+          setIsMissingLibrary(false);
+        }}
+        onComplete={(msg) => {
+          reloadData();
+          showToast(msg);
+        }}
       />
 
       {/* Floating System Toast with Countdown Bar (Slide in from bottom right 200ms, pause on hover, slide out right 150ms) */}

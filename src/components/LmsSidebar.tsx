@@ -6,8 +6,6 @@ import {
   Users, 
   BarChart3, 
   QrCode, 
-  Database, 
-  Cpu, 
   FileSpreadsheet, 
   Settings, 
   ChevronDown,
@@ -15,10 +13,10 @@ import {
   PanelLeftOpen,
   Command,
   X,
-  GraduationCap,
-  Eye
+  GraduationCap
 } from 'lucide-react';
 import { NavigationTab, Book } from '../types/library';
+import { ULM_CREST_SRC } from '../assets/brand/crestData';
 
 export type LmsNavItemData = {
   id: NavigationTab | 'search';
@@ -109,7 +107,6 @@ export function LmsSidebar({
         else if (e.key === '4') { e.preventDefault(); onTabChange('borrowers'); }
         else if (e.key === '5') { e.preventDefault(); onTabChange('reports'); }
         else if (e.key === '6') { e.preventDefault(); onTabChange('excel'); }
-        else if (e.key === '7') { e.preventDefault(); onTabChange('gallery'); }
         else if (e.key === ',') { e.preventDefault(); onTabChange('settings'); }
       }
     };
@@ -161,14 +158,6 @@ export function LmsSidebar({
         { id: 'reports', title: 'Reports & Audits', icon: BarChart3, shortcut: '⌘5' },
         { id: 'excel', title: 'Excel & PC Migration', icon: FileSpreadsheet, shortcut: '⌘6' },
       ]
-    },
-    {
-      heading: 'System Engine',
-      items: [
-        { id: 'sqlite', title: 'SQLite Native Layer', icon: Database },
-        { id: 'cpp_native', title: 'C++ Scanner Engine', icon: Cpu },
-        { id: 'gallery', title: 'State Gallery (Dev)', icon: Eye, shortcut: '⌘7' },
-      ]
     }
   ];
 
@@ -204,8 +193,15 @@ export function LmsSidebar({
             title={selectedCampus}
           >
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-8 h-8 rounded-[8px] bg-blue-600 text-[#F1F5F9] font-bold text-[12px] flex items-center justify-center shrink-0 shadow-sm">
-                <GraduationCap className="w-4 h-4 stroke-[2.2]" />
+              <div className="w-8 h-8 rounded-full bg-[#141214] border border-[#BC881B]/40 flex items-center justify-center shrink-0 overflow-hidden shadow-sm p-0.5" title="University of Lakki Marwat Official Crest">
+                <img 
+                  src={ULM_CREST_SRC} 
+                  alt="University of Lakki Marwat crest" 
+                  width={28} 
+                  height={28} 
+                  className="w-7 h-7 object-contain"
+                  style={{ imageRendering: 'auto' }}
+                />
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col min-w-0">

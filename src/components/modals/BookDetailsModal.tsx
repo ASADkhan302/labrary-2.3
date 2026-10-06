@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Book, Transaction } from '../../types/library';
 import { formatDisplayDate } from '../../utils/dateUtils';
+import { isArabicOrUrduScript } from '../../utils/urduUtils';
 
 interface BookDetailsModalProps {
   book: Book | null;
@@ -132,22 +133,57 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
                 <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   {book.category}
                 </span>
+                {(book.language === 'Urdu' || isArabicOrUrduScript(book.book_name)) ? (
+                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-950/70 text-emerald-300 border border-emerald-800">
+                    اردو · Nastaliq
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-xs font-mono-code text-slate-400 bg-slate-800 border border-slate-700">
+                    {book.language || 'English'}
+                  </span>
+                )}
                 <span className="text-xs font-mono-code text-slate-400">
                   {book.edition} · {book.publication_year}
                 </span>
               </div>
 
-              <h2 className="text-xl font-bold font-header text-[#F1F5F9] leading-snug">
+              <h2 
+                dir="auto"
+                style={{ unicodeBidi: 'plaintext' }}
+                className={`font-bold font-header text-[#F1F5F9] leading-snug ${
+                  isArabicOrUrduScript(book.book_name) ? 'font-urdu text-2xl leading-[2.1] py-1' : 'text-xl'
+                }`}
+              >
                 {book.book_name}
               </h2>
+              {book.title_roman && (
+                <p className="text-xs font-mono text-amber-400">
+                  Roman Urdu: {book.title_roman}
+                </p>
+              )}
 
-              <p className="text-xs text-slate-600 dark:text-slate-300">
+              <p 
+                dir="auto"
+                style={{ unicodeBidi: 'plaintext' }}
+                className={`text-xs text-slate-400 ${
+                  isArabicOrUrduScript(book.author) ? 'font-urdu text-base leading-[2]' : ''
+                }`}
+              >
                 Author: <span className="font-semibold text-[#F1F5F9]">{book.author}</span>
+                {book.author_roman && (
+                  <span className="text-xs text-slate-400 font-mono ml-1.5">({book.author_roman})</span>
+                )}
               </p>
 
               {book.publisher && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Publisher: {book.publisher} ({book.language})
+                <p 
+                  dir="auto"
+                  style={{ unicodeBidi: 'plaintext' }}
+                  className={`text-xs text-slate-500 dark:text-slate-400 ${
+                    isArabicOrUrduScript(book.publisher) ? 'font-urdu leading-[2]' : ''
+                  }`}
+                >
+                  Publisher: {book.publisher}
                 </p>
               )}
 
@@ -207,7 +243,13 @@ export const BookDetailsModal: React.FC<BookDetailsModalProps> = ({
           {book.description && (
             <div className="space-y-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Catalog Abstract & Course Notes</span>
-              <p className="text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-[#020617] p-4 rounded-xl border border-slate-200 dark:border-[#1E293B]">
+              <p 
+                dir="auto"
+                style={{ unicodeBidi: 'plaintext' }}
+                className={`text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-[#020617] p-4 rounded-xl border border-slate-200 dark:border-[#1E293B] ${
+                  isArabicOrUrduScript(book.description) ? 'font-urdu leading-[2.1]' : ''
+                }`}
+              >
                 {book.description}
               </p>
             </div>

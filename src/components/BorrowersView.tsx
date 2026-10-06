@@ -8,20 +8,16 @@ import {
   GraduationCap, 
   BookOpen, 
   AlertCircle,
-  LayoutGrid,
-  List,
-  CheckCircle2,
-  Clock,
   Building2,
   Trash2,
   Edit3,
   Printer,
-  PlusCircle,
   FileSpreadsheet,
   Download,
-  AlertTriangle,
-  UserCheck,
-  ShieldAlert
+  Eye,
+  CheckCircle2,
+  Clock,
+  Briefcase
 } from 'lucide-react';
 import { Borrower, Transaction, BorrowerRole, BorrowerStatus } from '../types/library';
 import AddEditBorrowerModal from './modals/AddEditBorrowerModal';
@@ -29,7 +25,12 @@ import BorrowerDetailsModal from './modals/BorrowerDetailsModal';
 import MemberCardPrintModal from './modals/MemberCardPrintModal';
 import BorrowerCsvImportModal from './modals/BorrowerCsvImportModal';
 import CustomSelect from './ui/CustomSelect';
-import { EmptyStateBooksDeco } from './decorative/EmptyStateBooksDeco';
+import { PageHeaderCard } from './shared/PageHeaderCard';
+import { SearchFilterBar } from './shared/SearchFilterBar';
+import { ItemCard } from './shared/SharedCards';
+import { StatusPill } from './shared/StatusPill';
+import { DataTable, ColumnDef } from './shared/DataTable';
+import { SharedCsvWriter } from '../utils/csvWriter';
 
 interface BorrowersViewProps {
   borrowers: Borrower[];
@@ -71,7 +72,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
   const [cardBorrower, setCardBorrower] = useState<Borrower | null>(null);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   // Distinct departments
   const departments = useMemo(() => {
@@ -88,10 +89,10 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
     borrowers.forEach(b => map.set(b.id, { active: 0, overdue: 0 }));
 
     transactions.forEach(t => {
-      if (t.status !== 'RETURNED') {
+      if (t.status !== 'RETURNED' && !t.return_date) {
         const stats = map.get(t.borrower_id) || { active: 0, overdue: 0 };
         stats.active += 1;
-        if (t.status === 'OVERDUE' || t.due_date < todayStr) {
+        if (t.status === 'OVERDUE' || (t.due_date && t.due_date < todayStr)) {
           stats.overdue += 1;
         }
         map.set(t.borrower_id, stats);
@@ -143,567 +144,606 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
     setCardBorrower(borrower);
   };
 
-  const handleToggleStatus = (borrower: Borrower) => {
-    if (!onUpdateBorrower) return;
-    const newStatus: BorrowerStatus = borrower.status === 'active' ? 'suspended' : 'active';
-    onUpdateBorrower(borrower.id, { status: newStatus, is_active: newStatus === 'active' });
-    if (detailsBorrower && detailsBorrower.id === borrower.id) {
-      setDetailsBorrower({ ...detailsBorrower, status: newStatus, is_active: newStatus === 'active' });
-    }
-  };
-
   const handleDownloadCsvTemplate = () => {
-    const csv = `University_ID,Name,Role,Department,Father_Name,Program,Session,Semester,Designation,Phone,Email,Address,Borrow_Limit,Valid_Until,Status,Notes
-ULM-FA23-BCS-050,Shahid Afridi,Student,Computer Science,Fazal Afridi,BCS,FA23,4,,0300-1122334,shahid.cs@ulm.edu.pk,Lakki Marwat,3,2027-06-30,active,Class FA23
-ULM-FAC-PHY-011,Dr. Rehmat Ullah,Faculty,Physics,,,,,Assistant Professor,0345-2233445,rehmat.phy@ulm.edu.pk,Bannu Road Campus,10,,active,Faculty
-ULM-STF-ADM-004,Muhammad Irfan,Staff,Management Sciences,,,,,Senior Clerk,0312-5566778,irfan.adm@ulm.edu.pk,Admin Block ULM,5,,active,Admin staff`;
+    const sampleRows = [
+      {
+        University_ID: 'ULM-FA23-BCS-050',
+        Name: 'Shahid Afridi',
+        Role: 'Student',
+        Department: 'Computer Science',
+        Father_Name: 'Fazal Afridi',
+        Program: 'BCS',
+        Session: 'FA23',
+        Semester: '4',
+        Designation: '',
+        Phone: '0300-1122334',
+        Email: 'shahid.cs@ulm.edu.pk',
+        Address: 'Lakki Marwat',
+        Borrow_Limit: '3',
+        Valid_Until: '2027-06-30',
+        Status: 'active',
+        Notes: 'Class FA23',
+      },
+      {
+        University_ID: 'ULM-FAC-PHY-011',
+        Name: 'Dr. Rehmat Ullah',
+        Role: 'Faculty',
+        Department: 'Physics',
+        Father_Name: '',
+        Program: '',
+        Session: '',
+        Semester: '',
+        Designation: 'Assistant Professor',
+        Phone: '0345-2233445',
+        Email: 'rehmat.phy@ulm.edu.pk',
+        Address: 'Bannu Road Campus',
+        Borrow_Limit: '10',
+        Valid_Until: '',
+        Status: 'active',
+        Notes: 'Faculty',
+      },
+      {
+        University_ID: 'ULM-STF-ADM-004',
+        Name: 'Muhammad Irfan',
+        Role: 'Staff',
+        Department: 'Management Sciences',
+        Father_Name: '',
+        Program: '',
+        Session: '',
+        Semester: '',
+        Designation: 'Senior Clerk',
+        Phone: '0312-5566778',
+        Email: 'irfan.adm@ulm.edu.pk',
+        Address: 'Admin Block ULM',
+        Borrow_Limit: '5',
+        Valid_Until: '',
+        Status: 'active',
+        Notes: 'Admin staff',
+      },
+    ];
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'ULM_Borrowers_Class_Import_Template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    SharedCsvWriter.downloadCsv(sampleRows, 'ULM_Borrowers_Class_Import_Template.csv');
   };
+
+  const getInitials = (name: string): string => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  // Accent line by role (Part 3.3): Student gold, Faculty blue, Staff purple
+  const getRoleAccentColor = (role?: BorrowerRole): string => {
+    if (role === 'Faculty') return '#29658E';
+    if (role === 'Staff') return '#541A72';
+    return '#BC881B'; // Student (default)
+  };
+
+  const renderRolePill = (role?: BorrowerRole) => {
+    if (role === 'Faculty') return <StatusPill label="Faculty" variant="blue" />;
+    if (role === 'Staff') return <StatusPill label="Staff" variant="purple" />;
+    return <StatusPill label="Student" variant="gold" />;
+  };
+
+  const renderStatusPill = (status?: BorrowerStatus) => {
+    if (status === 'suspended') return <StatusPill label="Suspended" variant="amber" dot />;
+    if (status === 'left') return <StatusPill label="Left" variant="muted" dot />;
+    return <StatusPill label="Active" variant="green" dot />;
+  };
+
+  // Table Columns Definition (Part 3.4)
+  const tableColumns: ColumnDef<Borrower>[] = [
+    {
+      header: 'Member',
+      width: '260px',
+      cell: (b) => {
+        return (
+          <div className="flex items-center gap-3 min-w-[200px]">
+            {b.photo_url ? (
+              <img
+                src={b.photo_url}
+                alt={b.name}
+                className="w-10 h-10 rounded-full object-cover border border-[#A66BC9]/30 shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#541A72]/25 border border-[#A66BC9]/30 text-[#C084FC] flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                {getInitials(b.name)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <button
+                type="button"
+                onClick={() => handleOpenDetails(b.id)}
+                className="text-[14px] font-semibold text-white hover:text-[#E0B450] text-left transition-colors cursor-pointer truncate max-w-[170px] block"
+                title={b.name}
+                dir="auto"
+              >
+                {b.name}
+              </button>
+              {b.father_name && (
+                <span className="text-[11px] text-[#B3AABD] block truncate" dir="auto">
+                  s/d of {b.father_name}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'University ID',
+      width: '160px',
+      cell: (b) => (
+        <span className="px-2 py-0.5 rounded-[6px] text-[12px] font-mono font-bold bg-[rgba(188,136,27,0.14)] text-[#E0B450] border border-[#BC881B]/35">
+          {b.university_id || b.student_id || 'N/A'}
+        </span>
+      ),
+    },
+    {
+      header: 'Role',
+      width: '110px',
+      cell: (b) => renderRolePill(b.role),
+    },
+    {
+      header: 'Department & Program',
+      cell: (b) => (
+        <div className="min-w-[170px]">
+          <span className="text-[13px] text-[#E7E2EC] block truncate" title={b.department}>
+            {b.department || 'General'}
+          </span>
+          <span className="text-[11px] font-mono text-[#B3AABD] block truncate">
+            {b.program || b.designation || 'Undergraduate'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: 'Status',
+      width: '110px',
+      cell: (b) => renderStatusPill(b.status),
+    },
+    {
+      header: 'Books On Loan',
+      width: '160px',
+      cell: (b) => {
+        const stats = borrowerStats.get(b.id) || { active: 0, overdue: 0 };
+        const max = b.borrow_limit || 3;
+        const pct = Math.min(100, Math.round((stats.active / max) * 100));
+        const barColor = pct >= 100 ? '#FB7185' : pct >= 70 ? '#F59E0B' : '#34D399';
+
+        return (
+          <div className="space-y-1 min-w-[120px]">
+            <div className="flex items-center justify-between text-[11px] font-mono">
+              <span className="text-white font-bold">{stats.active} / {max}</span>
+              {stats.overdue > 0 && (
+                <span className="text-rose-400 font-bold">{stats.overdue} overdue</span>
+              )}
+            </div>
+            <div className="w-full bg-white/[0.08] h-1 rounded-full overflow-hidden">
+              <div 
+                className="h-full rounded-full transition-all" 
+                style={{ width: `${pct}%`, backgroundColor: barColor }} 
+              />
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Actions',
+      align: 'right',
+      width: '200px',
+      cell: (b) => (
+        <div className="flex items-center justify-end gap-2">
+          {/* View */}
+          <button
+            type="button"
+            onClick={() => handleOpenDetails(b.id)}
+            className="h-9 px-3 rounded-[8px] bg-[#541A72] hover:bg-[#6A2290] text-white text-[12px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer border border-[#A66BC9]/30"
+            title="View member loan dossier"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">View</span>
+          </button>
+
+          {/* Edit */}
+          <button
+            type="button"
+            onClick={() => handleOpenEditModal(b)}
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[8px] border border-[#2E2A33] text-[#B3AABD] hover:text-[#6FA8D2] hover:border-[#29658E]/50 hover:bg-[rgba(111,168,210,0.12)] flex items-center justify-center transition-colors cursor-pointer"
+            title="Edit member information"
+            aria-label="Edit member"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Card */}
+          <button
+            type="button"
+            onClick={() => handlePrintCard(b)}
+            className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[8px] border border-[#2E2A33] text-[#B3AABD] hover:text-[#E0B450] hover:border-[#BC881B]/40 hover:bg-[rgba(188,136,27,0.14)] flex items-center justify-center transition-colors cursor-pointer"
+            title="Print membership card badge"
+            aria-label="Print library card"
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Delete */}
+          {onDeleteBorrower && (
+            <button
+              type="button"
+              onClick={() => onDeleteBorrower(b)}
+              className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[8px] border border-[#2E2A33] text-[#B3AABD] hover:text-[#FB7185] hover:border-[#FB7185]/40 hover:bg-[rgba(251,113,133,0.12)] flex items-center justify-center transition-colors cursor-pointer"
+              title="Delete member record"
+              aria-label="Delete member"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="flex-1 w-full bg-fluent-matrix px-4 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-y-auto space-y-6">
+    <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-y-auto space-y-6">
       <div className="max-w-[1920px] mx-auto space-y-5">
 
-        {/* Top Header & Fast Entry Action Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                <Users className="w-4 h-4" />
+        {/* 3.1 Header Card with people icon & ONE gold primary button */}
+        <PageHeaderCard
+          title="University Borrowers Directory"
+          subtitle="Registered students, researchers, and campus faculty members with active library circulation privileges."
+          icon={Users}
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={handleDownloadCsvTemplate}
+                className="h-10 px-3.5 rounded-[10px] bg-white/[0.06] hover:bg-white/[0.12] text-[#E7E2EC] font-semibold text-[13px] border border-white/[0.1] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                title="Download official student and faculty CSV template"
+              >
+                <Download className="w-4 h-4 text-[#BC881B]" />
+                <span>CSV Template</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsCsvModalOpen(true)}
+                className="h-10 px-4 rounded-[10px] bg-[#541A72] hover:bg-[#6A2290] text-white font-semibold text-[13px] border border-[#A66BC9]/30 transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+                title="Bulk import entire class roster from CSV"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-[#C084FC]" />
+                <span>Import Class CSV...</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenAddModal}
+                className="h-10 px-4 rounded-[10px] bg-gradient-to-r from-[#BC881B] to-[#D4A02A] hover:from-[#D4A02A] hover:to-[#E0B450] text-[#1A1A1A] font-bold text-[13px] shadow-[0_2px_12px_rgba(188,136,27,0.35)] hover:shadow-[0_4px_16px_rgba(188,136,27,0.5)] border border-[#E0B450]/40 transition-all duration-150 inline-flex items-center gap-2 cursor-pointer"
+                title="Register New Student or Faculty Member"
+              >
+                <UserPlus className="w-4 h-4 stroke-[2.5]" />
+                <span>+ Add Person</span>
+              </button>
+            </>
+          }
+        />
+
+        {/* 3.2 Search & Dropdown Filters Bar */}
+        <SearchFilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search by student, University ID, phone, email, or degree program..."
+          viewMode={viewMode}
+          onViewModeChange={(mode) => setViewMode(mode as 'table' | 'grid')}
+          viewModeLabels={{ grid: 'Grid View', list: 'Table View' }}
+          filters={
+            <>
+              {/* Role filter */}
+              <div className="w-36 min-w-[130px]">
+                <CustomSelect
+                  value={selectedRole}
+                  onChange={(val) => setSelectedRole(val as any)}
+                  options={[
+                    { value: 'All', label: 'All Roles' },
+                    { value: 'Student', label: 'Students' },
+                    { value: 'Faculty', label: 'Faculty' },
+                    { value: 'Staff', label: 'Staff' },
+                  ]}
+                  variant="dark"
+                />
               </div>
-              <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] font-cinzel leading-tight">
-                University Borrowers Directory
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Registered students, researchers, and campus faculty members with active library circulation privileges.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <button
-              type="button"
-              onClick={handleDownloadCsvTemplate}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-              title="Download official whole-class student and faculty CSV template"
-            >
-              <Download className="w-3.5 h-3.5 text-amber-500" />
-              <span>CSV Template</span>
-            </button>
+              {/* Department filter */}
+              <div className="w-48 min-w-[160px]">
+                <CustomSelect
+                  value={selectedDept}
+                  onChange={(val) => setSelectedDept(val)}
+                  options={[
+                    { value: 'ALL', label: 'All Departments' },
+                    ...departments.map(d => ({ value: d, label: d })),
+                  ]}
+                  searchable
+                  variant="dark"
+                />
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setIsCsvModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-              title="Bulk import entire class roster from CSV"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Import Class CSV...</span>
-            </button>
+              {/* Status filter */}
+              <div className="w-36 min-w-[130px]">
+                <CustomSelect
+                  value={selectedStatus}
+                  onChange={(val) => setSelectedStatus(val as any)}
+                  options={[
+                    { value: 'All', label: 'All Statuses' },
+                    { value: 'active', label: 'Active Status' },
+                    { value: 'suspended', label: 'Suspended' },
+                    { value: 'left', label: 'Left Campus' },
+                  ]}
+                  variant="dark"
+                />
+              </div>
+            </>
+          }
+        />
 
-            <button
-              type="button"
-              onClick={handleOpenAddModal}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs shadow-md transition-colors cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>+ Add Person</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Chips Bar (Role, Department, Status) & Search */}
-        <div className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs transition-colors">
-          
-          {/* Search Box */}
-          <div className="relative flex-1 min-w-[260px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, University ID, phone, email, or program..."
-              className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-
-          {/* Filter Chips */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Role Filter */}
-            <div className="w-36">
-              <CustomSelect
-                value={selectedRole}
-                onChange={(val) => setSelectedRole(val)}
-                options={[
-                  { value: 'All', label: 'All Roles' },
-                  { value: 'Student', label: 'Student' },
-                  { value: 'Faculty', label: 'Faculty' },
-                  { value: 'Staff', label: 'Staff' }
-                ]}
-                compact
-              />
-            </div>
-
-            {/* Department Filter */}
-            <div className="w-44">
-              <CustomSelect
-                value={selectedDept}
-                onChange={(val) => setSelectedDept(val)}
-                options={[
-                  { value: 'ALL', label: 'All Departments' },
-                  ...departments.map(d => ({ value: d, label: d }))
-                ]}
-                searchable
-                compact
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="w-36">
-              <CustomSelect
-                value={selectedStatus}
-                onChange={(val) => setSelectedStatus(val)}
-                options={[
-                  { value: 'All', label: 'All Statuses' },
-                  { value: 'active', label: 'Active', badge: 'Normal' },
-                  { value: 'suspended', label: 'Suspended', badge: 'Blocked' },
-                  { value: 'left', label: 'Left', badge: 'Archived' }
-                ]}
-                compact
-              />
-            </div>
-
-            {/* View Mode Toggle: Table / Grid */}
-            <div className="flex items-center bg-slate-100 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg p-1 gap-1">
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === 'table'
-                    ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200 dark:border-slate-700'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="Switch to Directory Table View"
-              >
-                <List className="w-3.5 h-3.5" />
-                <span>Table</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200 dark:border-slate-700'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="Switch to Card Grid View"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Grid</span>
-              </button>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Directory Listing */}
+        {/* 3.3 & 3.4 Members Display (Table View or Grid View) */}
         {filteredBorrowers.length === 0 ? (
-          <div className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl p-12 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-2xs">
-            <div className="flex items-center justify-center gap-3">
-              <Users className="w-12 h-12 text-slate-400 dark:text-slate-600" />
-              <EmptyStateBooksDeco />
-            </div>
-            <h4 className="text-base font-semibold text-slate-900 dark:text-slate-200 font-cinzel">No matching members found</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              No registered members match your search criteria. Try clearing search keywords or department/status filters.
+          <div className="rounded-[14px] bg-[#1A1A1A] border border-[#2E2A33] p-12 text-center text-[#B3AABD] space-y-3 shadow-md">
+            <Users className="w-12 h-12 mx-auto text-[#6F6879]" />
+            <h4 className="text-base font-semibold text-white">No borrower records found</h4>
+            <p className="text-xs text-[#B3AABD] max-w-md mx-auto">
+              No campus members match your current search query and role/department filters.
             </p>
             <button
-              onClick={() => { setSearchQuery(''); setSelectedDept('ALL'); setSelectedRole('All'); setSelectedStatus('All'); }}
-              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedRole('All');
+                setSelectedStatus('All');
+                setSelectedDept('ALL');
+              }}
+              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold rounded-[8px] border border-[#2E2A33] transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
-              Reset All Filters
+              Reset Member Filters
             </button>
           </div>
-        ) : viewMode === 'table' ? (
-          /* Table View */
-          <div className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] rounded-xl overflow-hidden shadow-2xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-[#020617] text-slate-500 dark:text-slate-400 uppercase font-mono text-[10.5px] border-b border-slate-200 dark:border-[#334155]">
-                  <tr>
-                    <th className="py-3 px-4 font-semibold">University ID</th>
-                    <th className="py-3 px-4 font-semibold">Member Name</th>
-                    <th className="py-3 px-4 font-semibold">Role</th>
-                    <th className="py-3 px-4 font-semibold">Department</th>
-                    <th className="py-3 px-4 font-semibold">Program / Title</th>
-                    <th className="py-3 px-4 font-semibold">Phone / Contact</th>
-                    <th className="py-3 px-4 text-center font-semibold">Status</th>
-                    <th className="py-3 px-4 text-center font-semibold">Loans / Quota</th>
-                    <th className="py-3 px-4 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
-                  {filteredBorrowers.map((bor) => {
-                    const stats = borrowerStats.get(bor.id) || { active: 0, overdue: 0 };
-                    const uid = bor.university_id || bor.student_id;
-                    const limit = bor.borrow_limit || (bor.role === 'Faculty' ? 10 : bor.role === 'Staff' ? 5 : 3);
-
-                    return (
-                      <tr 
-                        key={bor.id} 
-                        className="hover:bg-slate-50 dark:hover:bg-[#020617]/50 transition-colors group"
-                      >
-                        {/* University ID */}
-                        <td className="py-3 px-4 font-mono font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                          {uid}
-                        </td>
-
-                        {/* Name + Photo */}
-                        <td className="py-3 px-4">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDetails(bor.id)}
-                            className="flex items-center gap-2.5 text-left text-[#F1F5F9] hover:text-amber-500 font-bold transition-colors cursor-pointer"
-                          >
-                            {bor.photo_url || bor.photo_path ? (
-                              <img
-                                src={bor.photo_url || bor.photo_path}
-                                alt={bor.name}
-                                className="w-7 h-7 rounded-lg object-cover border border-amber-500/30 shrink-0"
-                              />
-                            ) : (
-                              <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-cinzel font-bold text-xs shrink-0">
-                                {bor.name.charAt(0)}
-                              </div>
-                            )}
-                            <span className="truncate max-w-[170px]">{bor.name}</span>
-                          </button>
-                        </td>
-
-                        {/* Role Badge */}
-                        <td className="py-3 px-4">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                            bor.role === 'Faculty'
-                              ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-                              : bor.role === 'Staff'
-                              ? 'bg-teal-500/15 text-teal-400 border-teal-500/30'
-                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                          }`}>
-                            {bor.role}
-                          </span>
-                        </td>
-
-                        {/* Department */}
-                        <td className="py-3 px-4 whitespace-nowrap text-slate-800 dark:text-slate-200">
-                          {bor.department}
-                        </td>
-
-                        {/* Program / Title */}
-                        <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-400 font-mono text-[11px]">
-                          {bor.role === 'Student' 
-                            ? `${bor.program || 'Student'} ${bor.session ? `(${bor.session})` : ''}` 
-                            : (bor.designation || bor.role)}
-                        </td>
-
-                        {/* Phone */}
-                        <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                          {bor.phone}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3 px-4 text-center">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                            bor.status === 'active'
-                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                              : bor.status === 'suspended'
-                              ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                              : 'bg-slate-700/40 text-slate-400 border-slate-600'
-                          }`}>
-                            {bor.status}
-                          </span>
-                        </td>
-
-                        {/* Loans / Limit */}
-                        <td className="py-3 px-4 text-center font-mono">
-                          {stats.overdue > 0 ? (
-                            <span className="text-rose-400 font-bold">
-                              {stats.active}/{limit} ({stats.overdue} overdue)
-                            </span>
-                          ) : (
-                            <span className={stats.active > 0 ? 'text-amber-400 font-bold' : 'text-slate-400'}>
-                              {stats.active} / {limit}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Row Actions */}
-                        <td className="py-3 px-4 text-right">
-                          <div className="inline-flex items-center gap-1 justify-end">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDetails(bor.id)}
-                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-                              title="View Profile Details & Loans"
-                            >
-                              <BookOpen className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditModal(bor)}
-                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-amber-500 dark:text-amber-400 transition-colors cursor-pointer"
-                              title="Edit Borrower Profile"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-
-                            {onOpenCirculationForBorrower && (
-                              <button
-                                type="button"
-                                onClick={() => onOpenCirculationForBorrower(bor.id)}
-                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-blue-500 dark:text-blue-400 transition-colors cursor-pointer"
-                                title="Issue Book to this Member"
-                              >
-                                <PlusCircle className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => handlePrintCard(bor)}
-                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-purple-500 dark:text-purple-400 transition-colors cursor-pointer"
-                              title="Print CR80 Member Identification Card"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleToggleStatus(bor)}
-                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
-                              title={bor.status === 'active' ? 'Suspend Member Account' : 'Reactivate Member Account'}
-                            >
-                              <ShieldAlert className="w-3.5 h-3.5" />
-                            </button>
-
-                            {onDeleteBorrower && (
-                              <button
-                                type="button"
-                                onClick={() => onDeleteBorrower(bor)}
-                                className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
-                                title="Deactivate or Remove Borrower"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          /* Grid View of Member Cards */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredBorrowers.map((bor) => {
-              const stats = borrowerStats.get(bor.id) || { active: 0, overdue: 0 };
-              const uid = bor.university_id || bor.student_id;
-              const limit = bor.borrow_limit || (bor.role === 'Faculty' ? 10 : bor.role === 'Staff' ? 5 : 3);
+        ) : viewMode === 'grid' ? (
+          /* 3.3 Member Card (Grid View) - Minimum 300px with staggered animation */
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+            {filteredBorrowers.map((b, idx) => {
+              const stats = borrowerStats.get(b.id) || { active: 0, overdue: 0 };
+              const max = b.borrow_limit || 3;
+              const pct = Math.min(100, Math.round((stats.active / max) * 100));
+              const barColor = pct >= 100 ? '#FB7185' : pct >= 70 ? '#F59E0B' : '#34D399';
+              const roleAccent = getRoleAccentColor(b.role);
 
               return (
-                <div
-                  key={bor.id}
-                  className="bg-[#0B1220] border border-slate-200 dark:border-[#334155] hover:border-amber-500/50 rounded-xl overflow-hidden shadow-2xs hover:shadow-md flex flex-col justify-between transition-all"
+                <ItemCard
+                  key={b.id}
+                  className="relative flex flex-col justify-between p-4 space-y-3.5 min-h-[250px]"
+                  style={
+                    idx < 12
+                      ? {
+                          animation: `fadeUp 200ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 30}ms forwards`,
+                        }
+                      : undefined
+                  }
                 >
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {bor.photo_url || bor.photo_path ? (
-                          <img
-                            src={bor.photo_url || bor.photo_path}
-                            alt={bor.name}
-                            className="w-10 h-10 rounded-lg object-cover border border-amber-500/40 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 font-cinzel font-bold text-sm shrink-0">
-                            {bor.name.charAt(0)}
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <h4 
-                            onClick={() => handleOpenDetails(bor.id)}
-                            className="font-header text-sm font-bold text-[#F1F5F9] hover:text-amber-500 cursor-pointer truncate transition-colors"
-                            title={bor.name}
-                          >
-                            {bor.name}
-                          </h4>
-                          <span className="font-mono text-[11px] text-amber-500 font-semibold tracking-wide">
-                            {uid}
+                  {/* 3px accent line on top by role: Student gold, Faculty blue, Staff purple */}
+                  <div
+                    className="absolute top-0 left-0 right-0 h-[3px]"
+                    style={{ backgroundColor: roleAccent }}
+                  />
+
+                  {/* Top row: 44px Avatar, Name, University ID chip, and Role pill */}
+                  <div className="flex items-start justify-between gap-3 pt-0.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {b.photo_url ? (
+                        <img
+                          src={b.photo_url}
+                          alt={b.name}
+                          className="w-11 h-11 rounded-full object-cover border border-[#A66BC9]/30 shrink-0 shadow-xs"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-full bg-[#541A72]/25 border border-[#A66BC9]/30 text-[#C084FC] flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                          {getInitials(b.name)}
+                        </div>
+                      )}
+
+                      <div className="min-w-0">
+                        <h3
+                          onClick={() => handleOpenDetails(b.id)}
+                          className="text-[16px] font-semibold text-white hover:text-[#E0B450] cursor-pointer transition-colors truncate max-w-[150px] sm:max-w-[180px] leading-snug"
+                          title={b.name}
+                          dir="auto"
+                        >
+                          {b.name}
+                        </h3>
+                        <div className="mt-1">
+                          <span className="px-2 py-0.5 rounded-[6px] text-[12px] font-mono font-bold bg-[rgba(188,136,27,0.14)] text-[#E0B450] border border-[#BC881B]/35 inline-block">
+                            {b.university_id || b.student_id || 'N/A'}
                           </span>
                         </div>
                       </div>
-
-                      <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0 ${
-                        bor.role === 'Faculty'
-                          ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-                          : bor.role === 'Staff'
-                          ? 'bg-teal-500/15 text-teal-400 border-teal-500/30'
-                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                      }`}>
-                        {bor.role}
-                      </span>
                     </div>
 
-                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#1E293B] space-y-1 text-xs">
-                      <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium truncate">
-                        <GraduationCap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span className="truncate">{bor.department}</span>
-                      </div>
-                      <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 pl-5 truncate">
-                        {bor.role === 'Student' 
-                          ? `${bor.program || 'Student'} (${bor.session || 'Class'})` 
-                          : (bor.designation || bor.role)}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
-                        bor.status === 'active'
-                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
-                      }`}>
-                        {bor.status}
-                      </span>
-
-                      <span className="font-mono text-[11px] text-slate-400">
-                        {stats.active} / {limit} books
-                      </span>
+                    <div className="shrink-0">
+                      {renderRolePill(b.role)}
                     </div>
                   </div>
 
-                  {/* Card Action Strip */}
-                  <div className="px-3 py-2 bg-slate-50 dark:bg-[#020617] border-t border-slate-200 dark:border-[#334155] flex items-center justify-between gap-1">
+                  {/* Info block: 1px divider, department with icon (13px body color), program (mono 12px muted) */}
+                  <div className="pt-2 border-t border-[#2E2A33] space-y-1">
+                    <div className="flex items-center gap-1.5 text-[13px] text-[#E7E2EC] truncate">
+                      <Building2 className="w-3.5 h-3.5 text-[#B3AABD] shrink-0" />
+                      <span className="truncate">{b.department || 'General Campus'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[12px] font-mono text-[#B3AABD] truncate">
+                      <GraduationCap className="w-3.5 h-3.5 text-[#B3AABD] shrink-0" />
+                      <span className="truncate">{b.program || b.designation || 'Undergraduate'}</span>
+                    </div>
+                  </div>
+
+                  {/* Loan Capacity & Status Row */}
+                  <div className="pt-2 border-t border-[#2E2A33] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[#B3AABD]">Books on loan</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-mono text-white font-bold tabular-nums">
+                          {stats.active} / {max}
+                        </span>
+                        {renderStatusPill(b.status)}
+                      </div>
+                    </div>
+
+                    {/* 4px Progress Bar */}
+                    <div className="w-full bg-white/[0.08] h-1 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${pct}%`, backgroundColor: barColor }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions Group (View, Edit, Card, Delete as 36px buttons grouped with 8px gap) */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-[#2E2A33]">
+                    {/* View */}
                     <button
                       type="button"
-                      onClick={() => handleOpenDetails(bor.id)}
-                      className="px-2 py-1 rounded bg-slate-200 dark:bg-[#1E293B] text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-300 dark:hover:bg-[#334155] transition-colors cursor-pointer"
+                      onClick={() => handleOpenDetails(b.id)}
+                      className="h-9 px-3.5 rounded-[8px] bg-[#541A72] hover:bg-[#6A2290] text-white text-[12px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-[#A66BC9]/30"
+                      title="View member loan record"
                     >
-                      View
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View</span>
                     </button>
+
+                    {/* Edit */}
                     <button
                       type="button"
-                      onClick={() => handleOpenEditModal(bor)}
-                      className="px-2 py-1 rounded bg-slate-200 dark:bg-[#1E293B] text-amber-500 text-xs font-semibold hover:bg-slate-300 dark:hover:bg-[#334155] transition-colors cursor-pointer"
+                      onClick={() => handleOpenEditModal(b)}
+                      className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[8px] border border-[#2E2A33] text-[#B3AABD] hover:text-[#6FA8D2] hover:border-[#29658E]/50 hover:bg-[rgba(111,168,210,0.12)] flex items-center justify-center transition-colors cursor-pointer"
+                      title="Edit member details"
+                      aria-label="Edit"
                     >
-                      Edit
+                      <Edit3 className="w-3.5 h-3.5" />
                     </button>
+
+                    {/* Card */}
                     <button
                       type="button"
-                      onClick={() => handlePrintCard(bor)}
-                      className="px-2 py-1 rounded bg-slate-200 dark:bg-[#1E293B] text-purple-400 text-xs font-semibold hover:bg-slate-300 dark:hover:bg-[#334155] transition-colors cursor-pointer"
+                      onClick={() => handlePrintCard(b)}
+                      className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[8px] border border-[#2E2A33] text-[#B3AABD] hover:text-[#E0B450] hover:border-[#BC881B]/40 hover:bg-[rgba(188,136,27,0.14)] flex items-center justify-center transition-colors cursor-pointer"
+                      title="Print library borrower card"
+                      aria-label="Card"
                     >
-                      Card
+                      <Printer className="w-3.5 h-3.5" />
                     </button>
+
+                    {/* Delete */}
                     {onDeleteBorrower && (
                       <button
                         type="button"
-                        onClick={() => onDeleteBorrower(bor)}
-                        className="p-1 rounded text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
-                        title="Remove member"
+                        onClick={() => onDeleteBorrower(b)}
+                        className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-[8px] border border-[#2E2A33] text-[#B3AABD] hover:text-[#FB7185] hover:border-[#FB7185]/40 hover:bg-[rgba(251,113,133,0.12)] flex items-center justify-center transition-colors cursor-pointer ml-auto"
+                        title="Delete member"
+                        aria-label="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
-                </div>
+                </ItemCard>
               );
             })}
           </div>
+        ) : (
+          /* 3.4 Table View (52px rows) */
+          <DataTable
+            data={filteredBorrowers}
+            columns={tableColumns}
+            keyExtractor={(b) => b.id}
+            rowHeightClass="min-h-[52px]"
+          />
         )}
 
       </div>
 
-      {/* 640px ADD/EDIT BORROWER MODAL */}
-      <AddEditBorrowerModal
-        isOpen={isAddEditModalOpen}
-        onClose={() => setIsAddEditModalOpen(false)}
-        onSave={onAddBorrower}
-        onUpdate={onUpdateBorrower}
-        borrowerToEdit={editingBorrower}
-        allBorrowers={borrowers}
-        onOpenExisting={(id) => {
-          setIsAddEditModalOpen(false);
-          handleOpenDetails(id);
-        }}
-      />
+      {/* Sub-modals */}
+      {isAddEditModalOpen && (
+        <AddEditBorrowerModal
+          isOpen={isAddEditModalOpen}
+          borrowerToEdit={editingBorrower}
+          allBorrowers={borrowers}
+          onClose={() => {
+            setIsAddEditModalOpen(false);
+            setEditingBorrower(null);
+          }}
+          onSave={(data) => {
+            if (editingBorrower && onUpdateBorrower) {
+              const res = onUpdateBorrower(editingBorrower.id, data);
+              if (res.success) {
+                setIsAddEditModalOpen(false);
+                setEditingBorrower(null);
+              }
+              return res;
+            } else {
+              const res = onAddBorrower(data);
+              if (res.success) {
+                setIsAddEditModalOpen(false);
+              }
+              return res;
+            }
+          }}
+        />
+      )}
 
-      {/* BORROWER DETAIL MODAL (4 TABS + ACTIONS) */}
-      <BorrowerDetailsModal
-        isOpen={Boolean(detailsBorrower)}
-        borrower={detailsBorrower}
-        transactions={transactions}
-        onClose={() => setDetailsBorrower(null)}
-        onReturnLoan={(txId) => {
-          if (onReturnLoan) onReturnLoan(txId);
-        }}
-        onOpenBookDetails={(bookId) => {
-          if (onOpenBookDetails) onOpenBookDetails(bookId);
-        }}
-        onEditBorrower={(b) => {
-          setDetailsBorrower(null);
-          handleOpenEditModal(b);
-        }}
-        onIssueBook={(b) => {
-          setDetailsBorrower(null);
-          if (onOpenCirculationForBorrower) onOpenCirculationForBorrower(b.id);
-        }}
-        onPrintCard={(b) => {
-          handlePrintCard(b);
-        }}
-        onToggleStatus={handleToggleStatus}
-      />
+      {detailsBorrower && (
+        <BorrowerDetailsModal
+          isOpen={Boolean(detailsBorrower)}
+          borrower={detailsBorrower}
+          transactions={transactions}
+          onClose={() => setDetailsBorrower(null)}
+          onIssueBook={(b) => {
+            if (onOpenCirculationForBorrower) {
+              onOpenCirculationForBorrower(b.id);
+            }
+            setDetailsBorrower(null);
+          }}
+          onReturnLoan={(tId) => {
+            if (onReturnLoan) onReturnLoan(tId);
+          }}
+          onOpenBookDetails={(bookId) => {
+            if (onOpenBookDetails) onOpenBookDetails(bookId);
+          }}
+        />
+      )}
 
-      {/* CR80 MEMBER IDENTIFICATION CARD MODAL */}
-      <MemberCardPrintModal
-        isOpen={Boolean(cardBorrower)}
-        borrower={cardBorrower}
-        onClose={() => setCardBorrower(null)}
-      />
+      {cardBorrower && (
+        <MemberCardPrintModal
+          isOpen={Boolean(cardBorrower)}
+          borrower={cardBorrower}
+          onClose={() => setCardBorrower(null)}
+        />
+      )}
 
-      {/* CLASS ROSTER CSV IMPORT MODAL */}
-      <BorrowerCsvImportModal
-        isOpen={isCsvModalOpen}
-        onClose={() => setIsCsvModalOpen(false)}
-        onImportComplete={() => {
-          if (onReloadData) onReloadData();
-        }}
-        onBatchImport={(newBorrowers) => {
-          if (onBatchImportBorrowers) {
-            return onBatchImportBorrowers(newBorrowers);
-          }
-          let count = 0;
-          const errors: string[] = [];
-          newBorrowers.forEach(b => {
-            const res = onAddBorrower(b);
-            if (res && res.success) count++;
-            else if (res && !res.success) errors.push(`${b.university_id}: ${res.message}`);
-          });
-          return { success: true, imported: count, errors };
-        }}
-      />
-
+      {isCsvModalOpen && (
+        <BorrowerCsvImportModal
+          isOpen={isCsvModalOpen}
+          onClose={() => setIsCsvModalOpen(false)}
+          onImportComplete={() => {
+            if (onReloadData) onReloadData();
+          }}
+          onBatchImport={(rows) => {
+            if (onBatchImportBorrowers) {
+              return onBatchImportBorrowers(rows);
+            }
+            return { success: false, imported: 0, errors: ['No import handler configured'] };
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1,6 +1,9 @@
 import { Book, Borrower, BorrowerRole, BorrowerStatus, Transaction, HistoryEntry, SystemSettings, StorageLocationConfig } from '../types/library';
 import { INITIAL_BOOKS, INITIAL_BORROWERS, INITIAL_TRANSACTIONS, INITIAL_HISTORY, INITIAL_SETTINGS } from './initialData';
 import { normalizeDateAdded, getTodayIso } from '../utils/dateUtils';
+import { computeSortKey, computeSearchText, sanitizeBidiOverrides, isArabicOrUrduScript } from '../utils/urduUtils';
+import { BarcodeService } from './barcodeService';
+import { BookSheetService } from './bookSheetService';
 
 const STORAGE_KEYS = {
   BOOKS: 'ulm_lms_books_v1',
@@ -26,6 +29,17 @@ export const DEFAULT_STORAGE_LOCATION: StorageLocationConfig = {
 
 export class LibraryStorage {
   private static directoryHandle: any = null;
+  private static booksCache: Book[] | null = null;
+  private static booksRawString: string | null = null;
+  private static historyCache: HistoryEntry[] | null = null;
+  private static historyRawString: string | null = null;
+
+  static clearBooksCache(): void {
+    this.booksCache = null;
+    this.booksRawString = null;
+    this.historyCache = null;
+    this.historyRawString = null;
+  }
 
   static setDirectoryHandle(handle: any): void {
     this.directoryHandle = handle;
@@ -99,29 +113,75 @@ export class LibraryStorage {
   static getBooks(): Book[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.BOOKS);
+      if (data && data === this.booksRawString && this.booksCache) {
+        return this.booksCache;
+      }
+
       let books: Book[];
       if (!data) {
         books = INITIAL_BOOKS;
-        localStorage.setItem(STORAGE_KEYS.BOOKS, JSON.stringify(INITIAL_BOOKS));
+        this.booksRawString = JSON.stringify(INITIAL_BOOKS);
+        localStorage.setItem(STORAGE_KEYS.BOOKS, this.booksRawString);
+        this.booksCache = books;
       } else {
         books = JSON.parse(data);
+        this.booksRawString = data;
+        this.booksCache = books;
       }
 
-      // Automatic Migration & Backfill check: Ensure all books have date_added populated
+      // Automatic Migration & Backfill check: Ensure all books have date_added, language, title_sort, author_sort, search_text populated
       let migrationNeeded = false;
       const today = getTodayIso();
       const migrated = books.map((b: Book) => {
-        if (!b.date_added) {
+        let changed = false;
+        let date_added = b.date_added;
+        if (!date_added) {
+          date_added = b.created_at ? b.created_at.split(' ')[0].split('T')[0] : today;
+          changed = true;
+        }
+
+        let language = b.language;
+        if (!language) {
+          language = isArabicOrUrduScript(b.book_name) ? 'Urdu' : 'English';
+          changed = true;
+        }
+
+        const title_sort = b.title_sort || computeSortKey(b.book_name);
+        if (!b.title_sort) changed = true;
+
+        const author_sort = b.author_sort || computeSortKey(b.author);
+        if (!b.author_sort) changed = true;
+
+        const search_text = b.search_text || computeSearchText({
+          book_name: b.book_name,
+          author: b.author,
+          title_roman: b.title_roman,
+          author_roman: b.author_roman,
+          publisher: b.publisher,
+          category: b.category,
+          barcode: b.barcode,
+          isbn: b.isbn,
+          dewey_call_number: b.dewey_call_number,
+        });
+        if (!b.search_text) changed = true;
+
+        if (changed) {
           migrationNeeded = true;
-          const fallbackDate = b.created_at ? b.created_at.split(' ')[0].split('T')[0] : today;
-          return { ...b, date_added: fallbackDate };
+          return {
+            ...b,
+            date_added,
+            language,
+            title_sort,
+            author_sort,
+            search_text,
+          };
         }
         return b;
       });
 
       if (migrationNeeded) {
         this.saveBooks(migrated);
-        localStorage.setItem(STORAGE_KEYS.USER_VERSION, '2');
+        localStorage.setItem(STORAGE_KEYS.USER_VERSION, '3');
         return migrated;
       }
       return books;
@@ -131,7 +191,31 @@ export class LibraryStorage {
   }
 
   static saveBooks(books: Book[]): void {
-    localStorage.setItem(STORAGE_KEYS.BOOKS, JSON.stringify(books));
+    this.booksCache = books;
+    this.booksRawString = JSON.stringify(books);
+    localStorage.setItem(STORAGE_KEYS.BOOKS, this.booksRawString);
+  }
+
+  static prependBook(newBook: Book, books: Book[]): void {
+    books.unshift(newBook);
+    this.booksCache = books;
+    if (this.booksRawString && this.booksRawString.startsWith('[')) {
+      const newBookJson = JSON.stringify(newBook);
+      const inner = this.booksRawString.trim();
+      if (inner === '[]') {
+        this.booksRawString = `[${newBookJson}]`;
+      } else {
+        this.booksRawString = `[${newBookJson},${inner.slice(1)}`;
+      }
+      localStorage.setItem(STORAGE_KEYS.BOOKS, this.booksRawString);
+    } else {
+      this.saveBooks(books);
+    }
+  }
+
+  static getBookByBarcode(barcode: string): Book | undefined {
+    const clean = barcode.trim().toUpperCase();
+    return this.getBooks().find(b => b.barcode.trim().toUpperCase() === clean);
   }
 
   /**
@@ -140,52 +224,156 @@ export class LibraryStorage {
    * Adds column date_added (DATE YYYY-MM-DD) to books table.
    * Backfills existing rows with the date part of created_at.
    * Creates B-Tree index idx_books_date_added.
+   * 
+   * Version 2 -> Version 3:
+   * Adds column language TEXT DEFAULT 'English', title_sort TEXT, author_sort TEXT, search_text TEXT, title_roman TEXT, author_roman TEXT.
+   * Backfills sort keys and search_text for all titles.
+   * Creates composite index idx_books_lang_title_sort ON books (language, title_sort)
+   * Creates B-Tree index idx_books_author_sort ON books (author_sort).
    */
   static migrateDatabase(): { success: boolean; message: string; rowsMigrated: number; version: number } {
     let count = 0;
     const books = this.getBooks();
     const today = getTodayIso();
     const updated = books.map(b => {
-      if (!b.date_added) {
+      let changed = false;
+      const fallbackDate = b.date_added || (b.created_at ? b.created_at.split(' ')[0].split('T')[0] : today);
+      if (!b.date_added) changed = true;
+
+      const lang = b.language || (isArabicOrUrduScript(b.book_name) ? 'Urdu' : 'English');
+      if (!b.language) changed = true;
+
+      const title_sort = b.title_sort || computeSortKey(b.book_name);
+      if (!b.title_sort) changed = true;
+
+      const author_sort = b.author_sort || computeSortKey(b.author);
+      if (!b.author_sort) changed = true;
+
+      const search_text = b.search_text || computeSearchText({
+        book_name: b.book_name,
+        author: b.author,
+        title_roman: b.title_roman,
+        author_roman: b.author_roman,
+        publisher: b.publisher,
+        category: b.category,
+        barcode: b.barcode,
+        isbn: b.isbn,
+        dewey_call_number: b.dewey_call_number,
+      });
+      if (!b.search_text) changed = true;
+
+      if (changed) {
         count++;
-        const fallbackDate = b.created_at ? b.created_at.split(' ')[0].split('T')[0] : today;
-        return { ...b, date_added: fallbackDate };
+        return {
+          ...b,
+          date_added: fallbackDate,
+          language: lang,
+          title_sort,
+          author_sort,
+          search_text,
+        };
       }
       return b;
     });
 
     this.saveBooks(updated);
-    localStorage.setItem(STORAGE_KEYS.USER_VERSION, '2');
+    localStorage.setItem(STORAGE_KEYS.USER_VERSION, '3');
 
     this.logHistory({
       action: 'SCHEMA_MIGRATION',
-      description: `Migrated database schema to v2: added date_added column with B-tree index and backfilled ${count} books.`,
-      barcode: 'SCHEMA-V2',
+      description: `Migrated database schema to v3: added language, title_sort, author_sort, search_text columns with B-Tree indexes (idx_books_lang_title_sort, idx_books_author_sort) and backfilled ${count} books.`,
+      barcode: 'SCHEMA-V3',
       user: 'SQLite-Migration-Engine',
     });
 
     return {
       success: true,
-      message: `Migration to SQLite schema v2 complete. Added date_added column and backfilled ${count} existing titles without data loss.`,
+      message: `Migration to SQLite schema v3 complete. Added Urdu and date_added columns, indexes, and backfilled ${count} existing titles without data loss.`,
       rowsMigrated: count,
-      version: 2,
+      version: 3,
     };
   }
 
   static addBook(book: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'is_active'>): { success: boolean; message: string; book?: Book } {
     const books = this.getBooks();
     
-    // Barcode must be unique
-    const existing = books.find(b => b.barcode.trim().toLowerCase() === book.barcode.trim().toLowerCase() && b.is_active);
-    if (existing) {
-      return { success: false, message: `Barcode "${book.barcode}" is already registered to "${existing.book_name}".` };
+    // Accession number resolution & atomic assignment
+    let accession_no = book.accession_no ? String(book.accession_no).trim() : '';
+    if (!accession_no) {
+      accession_no = BookSheetService.getNextAccessionNumber(books).accessionNo;
+    }
+
+    // Accession number must be unique across all active, inactive and withdrawn records
+    const withdrawnList = BookSheetService.getWithdrawnAccessions();
+    if (withdrawnList.includes(accession_no)) {
+      return { success: false, message: `Accession number "${accession_no}" was previously assigned to a withdrawn volume. Accession numbers are never reused.` };
+    }
+
+    // Barcode resolution: if not provided or empty, generate automatically via BarcodeService
+    let cleanBarcode = book.barcode ? sanitizeBidiOverrides(book.barcode).trim() : '';
+
+    if (!cleanBarcode) {
+      const gen = BarcodeService.generateBarcode(accession_no);
+      cleanBarcode = gen.barcode;
+    }
+
+    // Uniqueness verification across books in a single pass
+    const cleanAccLower = accession_no.toLowerCase();
+    const cleanBarcodeLower = cleanBarcode.toLowerCase();
+
+    for (let i = 0; i < books.length; i++) {
+      const b = books[i];
+      if (b.accession_no && b.accession_no.trim().toLowerCase() === cleanAccLower) {
+        return { success: false, message: `Accession number "${accession_no}" is already used by "${b.book_name}". Duplicate numbers are blocked.` };
+      }
+      if (b.barcode && b.barcode.trim().toLowerCase() === cleanBarcodeLower && b.is_active) {
+        return { success: false, message: `Barcode "${cleanBarcode}" is already registered to "${b.book_name}".` };
+      }
     }
 
     const today = getTodayIso();
     const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+    const book_name = sanitizeBidiOverrides(book.book_name).trim();
+    const author = sanitizeBidiOverrides(book.author).trim();
+    const publisher = sanitizeBidiOverrides(book.publisher || '').trim();
+    const description = sanitizeBidiOverrides(book.description || '').trim();
+    const title_roman = book.title_roman ? sanitizeBidiOverrides(book.title_roman).trim() : undefined;
+    const author_roman = book.author_roman ? sanitizeBidiOverrides(book.author_roman).trim() : undefined;
+    const language = book.language || (isArabicOrUrduScript(book_name) ? 'Urdu' : 'English');
+
     const newBook: Book = {
       ...book,
       id: this.generateId('book'),
+      barcode: cleanBarcode,
+      accession_no,
+      place: book.place || '',
+      binding: book.binding || 'HB',
+      pages: book.pages,
+      price: book.price,
+      source_remarks: book.source_remarks || description,
+      import_batch_id: book.import_batch_id,
+      imported_at: book.imported_at,
+      book_name,
+      author,
+      publisher,
+      description,
+      language,
+      title_roman,
+      author_roman,
+      title_sort: computeSortKey(book_name),
+      author_sort: computeSortKey(author),
+      search_text: computeSearchText({
+        book_name,
+        author,
+        title_roman,
+        author_roman,
+        publisher,
+        category: book.category,
+        barcode: cleanBarcode,
+        isbn: book.isbn,
+        dewey_call_number: book.dewey_call_number,
+      }),
       date_added: book.date_added || today,
       created_at: now,
       updated_at: now,
@@ -195,12 +383,18 @@ export class LibraryStorage {
     // Ensure available does not exceed total
     newBook.available_quantity = Math.min(newBook.available_quantity, newBook.total_quantity);
 
-    books.unshift(newBook);
-    this.saveBooks(books);
+    this.prependBook(newBook, books);
+
+    // Enqueue for background safe appending to linked sheet
+    try {
+      BookSheetService.enqueueBook(newBook);
+    } catch {
+      // Non-blocking sheet queue
+    }
 
     this.logHistory({
       action: 'BOOK_ADDED',
-      description: `Added "${newBook.book_name}" (Barcode: ${newBook.barcode}, Copies: ${newBook.total_quantity})`,
+      description: `Added "${newBook.book_name}" (Barcode: ${newBook.barcode}, Language: ${newBook.language}, Copies: ${newBook.total_quantity})`,
       barcode: newBook.barcode,
       book_id: newBook.id,
       user: 'Librarian-Admin',
@@ -209,7 +403,7 @@ export class LibraryStorage {
     return { success: true, message: 'Book registered successfully.', book: newBook };
   }
 
-  static updateBook(id: string, updates: Partial<Book>): { success: boolean; message: string } {
+  static updateBook(id: string, updates: Partial<Book>): { success: boolean; message: string; book?: Book } {
     const books = this.getBooks();
     const index = books.findIndex(b => b.id === id);
     if (index === -1) {
@@ -217,10 +411,12 @@ export class LibraryStorage {
     }
 
     if (updates.barcode) {
-      const duplicate = books.find(b => b.id !== id && b.barcode.trim().toLowerCase() === updates.barcode!.trim().toLowerCase() && b.is_active);
+      const cleanBc = sanitizeBidiOverrides(updates.barcode).trim();
+      const duplicate = books.find(b => b.id !== id && b.barcode.trim().toLowerCase() === cleanBc.toLowerCase() && b.is_active);
       if (duplicate) {
         return { success: false, message: `Cannot update: Barcode "${updates.barcode}" belongs to "${duplicate.book_name}".` };
       }
+      updates.barcode = cleanBc;
     }
 
     const current = books[index];
@@ -231,10 +427,42 @@ export class LibraryStorage {
     if (available > total) available = total;
     if (available < 0) available = 0;
 
+    const book_name = updates.book_name !== undefined ? sanitizeBidiOverrides(updates.book_name).trim() : current.book_name;
+    const author = updates.author !== undefined ? sanitizeBidiOverrides(updates.author).trim() : current.author;
+    const publisher = updates.publisher !== undefined ? sanitizeBidiOverrides(updates.publisher).trim() : current.publisher;
+    const description = updates.description !== undefined ? sanitizeBidiOverrides(updates.description).trim() : current.description;
+    const title_roman = updates.title_roman !== undefined ? sanitizeBidiOverrides(updates.title_roman).trim() : current.title_roman;
+    const author_roman = updates.author_roman !== undefined ? sanitizeBidiOverrides(updates.author_roman).trim() : current.author_roman;
+    const language = updates.language || current.language || (isArabicOrUrduScript(book_name) ? 'Urdu' : 'English');
+
+    const title_sort = computeSortKey(book_name);
+    const author_sort = computeSortKey(author);
+    const search_text = computeSearchText({
+      book_name,
+      author,
+      title_roman,
+      author_roman,
+      publisher,
+      category: updates.category !== undefined ? updates.category : current.category,
+      barcode: updates.barcode !== undefined ? updates.barcode : current.barcode,
+      isbn: updates.isbn !== undefined ? updates.isbn : current.isbn,
+      dewey_call_number: updates.dewey_call_number !== undefined ? updates.dewey_call_number : current.dewey_call_number,
+    });
+
     const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
     books[index] = {
       ...current,
       ...updates,
+      book_name,
+      author,
+      publisher,
+      description,
+      language,
+      title_roman,
+      author_roman,
+      title_sort,
+      author_sort,
+      search_text,
       total_quantity: total,
       available_quantity: available,
       updated_at: now,
@@ -250,7 +478,7 @@ export class LibraryStorage {
       user: 'Librarian-Admin',
     });
 
-    return { success: true, message: 'Book record updated successfully.' };
+    return { success: true, message: 'Book record updated successfully.', book: books[index] };
   }
 
   static deleteBook(id: string, permanent: boolean = false): { success: boolean; message: string } {
@@ -270,6 +498,14 @@ export class LibraryStorage {
     const targetBook = books[index];
     const bookTitle = targetBook.book_name;
     const barcode = targetBook.barcode;
+
+    // Permanently remember accession number in withdrawn registry (numbers are never reused)
+    if (targetBook.accession_no) {
+      BookSheetService.registerWithdrawnAccession(targetBook.accession_no);
+    } else {
+      const match = barcode.match(/\d+/);
+      if (match) BookSheetService.registerWithdrawnAccession(match[0]);
+    }
 
     if (permanent) {
       books.splice(index, 1);
@@ -374,7 +610,7 @@ export class LibraryStorage {
     if (existing) {
       return { 
         success: false, 
-        message: `Already exists: ${existing.name}`,
+        message: `Member with Registration / Employee ID "${uid}" is already registered (${existing.name}).`,
         existingBorrowerId: existing.id
       };
     }
@@ -544,16 +780,31 @@ export class LibraryStorage {
   }
 
   static clearDemoData(): { success: boolean; message: string; count: number } {
+    const demoBookIds = new Set([
+      'book-001', 'book-002', 'book-003', 'book-004', 'book-005',
+      'book-006', 'book-007', 'book-008', 'book-009', 'book-010',
+      'book-011', 'book-012', 'book-013'
+    ]);
+    const demoBorrowerIds = new Set([
+      'bor-001', 'bor-002', 'bor-003', 'bor-004',
+      'bor-005', 'bor-006', 'bor-007', 'bor-008'
+    ]);
+    const demoTxIds = new Set(['tx-001', 'tx-002', 'tx-003', 'tx-004', 'tx-005', 'tx-006', 'tx-007']);
+
     const borrowers = this.getBorrowers();
-    const demoBorrowers = borrowers.filter(b => b.notes === 'DEMO');
-    const demoBorrowerIds = new Set(demoBorrowers.map(b => b.id));
-    const remainingBorrowers = borrowers.filter(b => b.notes !== 'DEMO');
+    const demoBorrowers = borrowers.filter(b => demoBorrowerIds.has(b.id) || b.notes === 'DEMO' || b.notes?.includes('DEMO') || (b as any).is_sample);
+    const activeDemoBorrowerIds = new Set(demoBorrowers.map(b => b.id));
+    const remainingBorrowers = borrowers.filter(b => !activeDemoBorrowerIds.has(b.id));
 
     const books = this.getBooks();
-    const remainingBooks = books.filter(b => (b as any).source_remarks !== 'DEMO');
+    const demoBooks = books.filter(b => demoBookIds.has(b.id) || (b as any).source_remarks === 'DEMO' || (b as any).notes === 'DEMO' || b.description?.includes('DEMO') || (b as any).is_sample);
+    const activeDemoBookIds = new Set(demoBooks.map(b => b.id));
+    const remainingBooks = books.filter(b => !activeDemoBookIds.has(b.id));
 
     const transactions = this.getTransactions();
-    const remainingTransactions = transactions.filter(t => !demoBorrowerIds.has(t.borrower_id));
+    const demoTransactions = transactions.filter(t => demoTxIds.has(t.id) || activeDemoBorrowerIds.has(t.borrower_id) || activeDemoBookIds.has(t.book_id));
+    const activeDemoTxIds = new Set(demoTransactions.map(t => t.id));
+    const remainingTransactions = transactions.filter(t => !activeDemoTxIds.has(t.id));
 
     this.saveBorrowers(remainingBorrowers);
     this.saveBooks(remainingBooks);
@@ -561,15 +812,15 @@ export class LibraryStorage {
 
     this.logHistory({
       action: 'CLEAR_DEMO',
-      description: `Cleared ${demoBorrowers.length} sample demo people (notes = 'DEMO') and demo records.`,
+      description: `Removed demo sample collection: ${demoBooks.length} books, ${demoBorrowers.length} members, and ${demoTransactions.length} loans. Real user records preserved.`,
       barcode: 'DEMO-CLEAR',
       user: 'Librarian-Admin'
     });
 
     return {
       success: true,
-      message: `Cleared ${demoBorrowers.length} demo borrower records.`,
-      count: demoBorrowers.length
+      message: `Cleared ${demoBooks.length} demo books, ${demoBorrowers.length} demo members, and ${demoTransactions.length} demo loans. Real records preserved.`,
+      count: demoBooks.length + demoBorrowers.length
     };
   }
 
@@ -745,11 +996,19 @@ export class LibraryStorage {
   static getHistory(): HistoryEntry[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.HISTORY);
+      if (data && data === this.historyRawString && this.historyCache) {
+        return this.historyCache;
+      }
       if (!data) {
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(INITIAL_HISTORY));
+        this.historyCache = INITIAL_HISTORY;
+        this.historyRawString = JSON.stringify(INITIAL_HISTORY);
+        localStorage.setItem(STORAGE_KEYS.HISTORY, this.historyRawString);
         return INITIAL_HISTORY;
       }
-      return JSON.parse(data);
+      const parsed: HistoryEntry[] = JSON.parse(data);
+      this.historyCache = parsed;
+      this.historyRawString = data;
+      return parsed;
     } catch {
       return INITIAL_HISTORY;
     }
@@ -765,7 +1024,15 @@ export class LibraryStorage {
     };
     history.unshift(newEntry);
     if (history.length > 500) history.pop();
-    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+    this.historyCache = history;
+    this.historyRawString = JSON.stringify(history);
+    localStorage.setItem(STORAGE_KEYS.HISTORY, this.historyRawString);
+  }
+
+  static saveHistory(history: HistoryEntry[]): void {
+    this.historyCache = history;
+    this.historyRawString = JSON.stringify(history);
+    localStorage.setItem(STORAGE_KEYS.HISTORY, this.historyRawString);
   }
 
   // --- Settings ---
@@ -871,7 +1138,7 @@ export class LibraryStorage {
       }
 
       if (upper.startsWith('PRAGMA USER_VERSION =') || upper.startsWith('PRAGMA USER_VERSION=')) {
-        const val = parseInt(trimmed.replace(/[^0-9]/g, ''), 10) || 2;
+        const val = parseInt(trimmed.replace(/[^0-9]/g, ''), 10) || 3;
         localStorage.setItem(STORAGE_KEYS.USER_VERSION, String(val));
         return {
           columns: ['user_version'],
@@ -882,7 +1149,7 @@ export class LibraryStorage {
       }
 
       if (upper.startsWith('PRAGMA USER_VERSION')) {
-        const v = parseInt(localStorage.getItem(STORAGE_KEYS.USER_VERSION) || '2', 10);
+        const v = parseInt(localStorage.getItem(STORAGE_KEYS.USER_VERSION) || '3', 10);
         return {
           columns: ['user_version'],
           rows: [[v]],
@@ -897,27 +1164,29 @@ export class LibraryStorage {
             [0, 'idx_books_barcode', 1, 'c', 0],
             [1, 'idx_books_isbn', 0, 'c', 0],
             [2, 'idx_books_date_added', 0, 'c', 0],
+            [3, 'idx_books_lang_title_sort', 0, 'c', 0],
+            [4, 'idx_books_author_sort', 0, 'c', 0],
           ],
           executionTimeMs: Math.round((performance.now() - start) * 100) / 100,
         };
       }
 
-      if (upper.startsWith('ALTER TABLE BOOKS ADD COLUMN DATE_ADDED') || (upper.startsWith('ALTER TABLE') && upper.includes('DATE_ADDED'))) {
+      if (upper.startsWith('ALTER TABLE BOOKS ADD COLUMN') || (upper.startsWith('ALTER TABLE') && (upper.includes('LANGUAGE') || upper.includes('TITLE_SORT') || upper.includes('AUTHOR_SORT') || upper.includes('SEARCH_TEXT') || upper.includes('DATE_ADDED')))) {
         const res = this.migrateDatabase();
         return {
           columns: ['status'],
-          rows: [[`Column date_added added to books table. Backfilled ${res.rowsMigrated} rows.`]],
+          rows: [[`Schema migrated to v3. Backfilled ${res.rowsMigrated} rows with language, title_sort, author_sort, and search_text.`]],
           executionTimeMs: Math.round((performance.now() - start) * 100) / 100,
           message: res.message,
         };
       }
 
-      if (upper.startsWith('CREATE INDEX') && upper.includes('DATE_ADDED')) {
+      if (upper.startsWith('CREATE INDEX') && (upper.includes('TITLE_SORT') || upper.includes('AUTHOR_SORT') || upper.includes('DATE_ADDED') || upper.includes('LANGUAGE'))) {
         return {
           columns: ['status'],
-          rows: [['Index idx_books_date_added created']],
+          rows: [['Index created successfully']],
           executionTimeMs: Math.round((performance.now() - start) * 100) / 100,
-          message: 'B-tree Index idx_books_date_added active for sub-10ms sorting across 100,000+ volumes.',
+          message: 'B-tree Index active for sub-10ms sorting across 100,000+ volumes.',
         };
       }
 
@@ -938,6 +1207,12 @@ export class LibraryStorage {
             [8, 'shelf', 'TEXT', 0, null, 0],
             [9, 'is_active', 'INTEGER', 1, 1, 0],
             [10, 'date_added', 'DATE', 0, null, 0],
+            [11, 'language', 'TEXT', 0, "'English'", 0],
+            [12, 'title_sort', 'TEXT', 0, null, 0],
+            [13, 'author_sort', 'TEXT', 0, null, 0],
+            [14, 'search_text', 'TEXT', 0, null, 0],
+            [15, 'title_roman', 'TEXT', 0, null, 0],
+            [16, 'author_roman', 'TEXT', 0, null, 0],
           ];
         } else if (tableName === 'borrowers') {
           cols = [
@@ -1716,6 +1991,9 @@ export class LibraryStorage {
     const publisherIdx = header.findIndex(h => h.includes('publisher'));
     const editionIdx = header.findIndex(h => h.includes('edition'));
     const yearIdx = header.findIndex(h => h.includes('year'));
+    const langIdx = header.findIndex(h => h.includes('language') || h.includes('lang'));
+    const titleRomanIdx = header.findIndex(h => h.includes('titleroman') || h.includes('romanizedtitle'));
+    const authorRomanIdx = header.findIndex(h => h.includes('authorroman') || h.includes('romanizedauthor'));
 
     const currentBooks = this.getBooks();
     let importedCount = 0;
@@ -1725,8 +2003,8 @@ export class LibraryStorage {
       if (!line) continue;
       const cols = this.parseCsvRow(line);
 
-      const barcode = barcodeIdx !== -1 && cols[barcodeIdx] ? cols[barcodeIdx].trim() : `ULM-${String(10000 + i)}`;
-      const title = titleIdx !== -1 && cols[titleIdx] ? cols[titleIdx].trim() : `Book Title #${i}`;
+      const rawBarcode = barcodeIdx !== -1 && cols[barcodeIdx] ? cols[barcodeIdx].trim() : `ULM-${String(10000 + i)}`;
+      const rawTitle = titleIdx !== -1 && cols[titleIdx] ? cols[titleIdx].trim() : `Book Title #${i}`;
       const rawDate = dateAddedIdx !== -1 ? cols[dateAddedIdx] : '';
 
       // Validate Date Added
@@ -1734,31 +2012,61 @@ export class LibraryStorage {
       if (!dateRes.valid) {
         errors.push({
           row: i + 1,
-          identifier: barcode || title,
+          identifier: rawBarcode || rawTitle,
           error: dateRes.error || 'Invalid date_added value',
         });
         continue;
       }
 
+      const barcode = sanitizeBidiOverrides(rawBarcode).trim();
+      const book_name = sanitizeBidiOverrides(rawTitle).trim();
+      const author = sanitizeBidiOverrides(authorIdx !== -1 && cols[authorIdx] ? cols[authorIdx].trim() : 'Anonymous').trim();
+      const category = sanitizeBidiOverrides(categoryIdx !== -1 && cols[categoryIdx] ? cols[categoryIdx].trim() : 'General').trim();
+      const publisher = sanitizeBidiOverrides(publisherIdx !== -1 && cols[publisherIdx] ? cols[publisherIdx].trim() : 'ULM Press').trim();
+      const edition = sanitizeBidiOverrides(editionIdx !== -1 && cols[editionIdx] ? cols[editionIdx].trim() : '1st Edition').trim();
+      const isbn = sanitizeBidiOverrides(isbnIdx !== -1 && cols[isbnIdx] ? cols[isbnIdx].trim() : `ISBN-${barcode}`).trim();
+      const shelf = sanitizeBidiOverrides(shelfIdx !== -1 && cols[shelfIdx] ? cols[shelfIdx].trim() : 'General').trim();
+      const dewey_call_number = sanitizeBidiOverrides(deweyIdx !== -1 && cols[deweyIdx] ? cols[deweyIdx].trim() : '000 GEN').trim();
+      const title_roman = titleRomanIdx !== -1 && cols[titleRomanIdx] ? sanitizeBidiOverrides(cols[titleRomanIdx]).trim() : undefined;
+      const author_roman = authorRomanIdx !== -1 && cols[authorRomanIdx] ? sanitizeBidiOverrides(cols[authorRomanIdx]).trim() : undefined;
+      const language = langIdx !== -1 && cols[langIdx] 
+        ? sanitizeBidiOverrides(cols[langIdx]).trim() 
+        : (isArabicOrUrduScript(book_name) ? 'Urdu' : 'English');
+
       const book: Book = {
         id: this.generateId('book'),
         barcode,
-        isbn: isbnIdx !== -1 && cols[isbnIdx] ? cols[isbnIdx].trim() : `ISBN-${barcode}`,
-        book_name: title,
-        author: authorIdx !== -1 && cols[authorIdx] ? cols[authorIdx].trim() : 'Anonymous',
-        category: categoryIdx !== -1 && cols[categoryIdx] ? cols[categoryIdx].trim() : 'General',
-        publisher: publisherIdx !== -1 && cols[publisherIdx] ? cols[publisherIdx].trim() : 'ULM Press',
-        edition: editionIdx !== -1 && cols[editionIdx] ? cols[editionIdx].trim() : '1st Edition',
+        isbn,
+        book_name,
+        author,
+        category,
+        publisher,
+        edition,
         publication_year: yearIdx !== -1 && cols[yearIdx] ? parseInt(cols[yearIdx], 10) || 2024 : 2024,
-        language: 'English',
+        language,
+        title_roman,
+        author_roman,
+        title_sort: computeSortKey(book_name),
+        author_sort: computeSortKey(author),
+        search_text: computeSearchText({
+          book_name,
+          author,
+          title_roman,
+          author_roman,
+          publisher,
+          category,
+          barcode,
+          isbn,
+          dewey_call_number,
+        }),
         description: 'Imported from CSV',
         book_image_path: '',
         total_quantity: copiesIdx !== -1 && cols[copiesIdx] ? parseInt(cols[copiesIdx], 10) || 1 : 1,
         available_quantity: copiesIdx !== -1 && cols[copiesIdx] ? parseInt(cols[copiesIdx], 10) || 1 : 1,
-        shelf: shelfIdx !== -1 && cols[shelfIdx] ? cols[shelfIdx].trim() : 'General',
+        shelf,
         row: '1',
         section: 'Main Stacks',
-        dewey_call_number: deweyIdx !== -1 && cols[deweyIdx] ? cols[deweyIdx].trim() : '000 GEN',
+        dewey_call_number,
         date_added: dateRes.date!,
         created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
         updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),

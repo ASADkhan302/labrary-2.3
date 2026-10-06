@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource/noto-nastaliq-urdu/index.css";
+@import "@fontsource/noto-naskh-arabic/index.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -10,6 +12,7 @@
     --font-cinzel-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --font-urdu: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', serif;
 
     /* ULM BRAND PALETTE TOKENS */
     /* Surfaces */
@@ -92,6 +95,14 @@
     --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35);
     --shadow-modal: 0 20px 48px rgba(0, 0, 0, 0.6);
     --modal-backdrop: rgba(20, 18, 20, 0.75);
+
+    /* Z-INDEX TOKENS */
+    --z-sticky: 10;
+    --z-toolbar: 20;
+    --z-dropdown: 1000;
+    --z-modal: 1100;
+    --z-toast: 1200;
+    --z-tooltip: 1300;
 
     /* MOTION TOKENS: 150ms ease-out on color and border */
     --duration-micro: 80ms;
@@ -374,18 +385,83 @@ textarea:disabled {
   transform: none !important;
 }
 
-/* Primary Button: Gold #BC881B, hover #D4A02A, pressed #A87B16, text #1A1A1A */
+/* ==========================================================================
+   SHARED UNIFIED BUTTON SYSTEM
+   Variants: Primary (Gold), Secondary (Purple), Ghost (Slate Blue), Danger (Rose), Icon, Segmented
+   Sizes: sm (32px), md (36px), lg (40px) - minimum click area 32px
+   States: default, hover, focus-visible (2px gold ring), pressed, disabled (muted, never opacity), loading, selected
+   Isolation & Label: position relative, isolation isolate, label z-index 1, decor z-index -1
+   ========================================================================== */
+
+button,
+[role="button"],
+.btn {
+  position: relative !important;
+  isolation: isolate !important;
+  user-select: none;
+  touch-action: manipulation;
+  min-height: 32px;
+  min-width: fit-content;
+  white-space: nowrap;
+}
+
+/* Ensure all text labels and icons are strictly ABOVE decorative elements */
+button > *,
+[role="button"] > *,
+.btn > *,
+.btn-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* Decorative ripples, pseudo elements, and shines are strictly BELOW labels */
+.btn-ripple-wave,
+.btn-deco,
+button::before,
+button::after {
+  z-index: -1 !important;
+  pointer-events: none !important;
+}
+
+/* Size Variants */
+.btn-sm,
+button.h-8 {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px;
+  font-size: 12px !important;
+  border-radius: 8px !important;
+}
+
+.btn-md,
+button.h-9 {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 14px;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+}
+
+.btn-lg,
+button.h-10,
+button.h-11 {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 16px;
+  font-size: 14px !important;
+  border-radius: 8px !important;
+}
+
+/* 1. Primary Button: Gold #BC881B, text #1A1A1A (8.5:1 contrast) */
 .btn-primary,
 .btn-gold,
 button.bg-amber-500,
-button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.btn-dark) {
+button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.btn-dark):not(.btn-outline) {
   background-color: var(--gold) !important;
   color: var(--text-on-gold) !important;
   font-weight: 700 !important;
-  font-size: 14px !important;
-  height: 40px;
-  padding: 0 16px;
-  border: none !important;
+  font-size: 14px;
+  border: 1px solid rgba(212, 160, 42, 0.4) !important;
   border-radius: 8px !important;
   display: inline-flex;
   align-items: center;
@@ -398,7 +474,7 @@ button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.
 .btn-primary:hover:not(:disabled):not(:active),
 .btn-gold:hover:not(:disabled):not(:active),
 button.bg-amber-500:hover:not(:disabled):not(:active),
-button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.btn-dark):hover:not(:disabled):not(:active) {
+button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.btn-dark):not(.btn-outline):hover:not(:disabled):not(:active) {
   background-color: var(--gold-hover) !important;
   color: var(--text-on-gold) !important;
   transform: translateY(-1px);
@@ -408,24 +484,35 @@ button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.
 .btn-primary:active:not(:disabled),
 .btn-gold:active:not(:disabled),
 button.bg-amber-500:active:not(:disabled),
-button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.btn-dark):active:not(:disabled) {
+button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.btn-dark):not(.btn-outline):active:not(:disabled) {
   background-color: var(--gold-pressed) !important;
   color: var(--text-on-gold) !important;
   transform: scale(0.98);
 }
 
-/* Secondary Button: Purple #541A72, hover #6A2290, pressed #3F1256, text #FFFFFF */
+.btn-primary:disabled,
+.btn-gold:disabled,
+button.bg-amber-500:disabled,
+button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.btn-dark):not(.btn-outline):disabled {
+  background-color: #382C10 !important;
+  color: #8F7635 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* 2. Secondary Button: Purple #541A72, text #FFFFFF (9.2:1 contrast) */
 .btn-secondary,
 .btn-purple,
 .btn-dark {
   background-color: var(--purple) !important;
   color: var(--text-strong) !important;
-  border: 1px solid rgba(166, 107, 201, 0.25) !important;
+  border: 1px solid rgba(166, 107, 201, 0.3) !important;
   border-radius: 8px !important;
-  font-size: 14px !important;
+  font-size: 14px;
   font-weight: 600 !important;
-  height: 40px;
-  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -439,7 +526,7 @@ button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.
 .btn-dark:hover:not(:disabled):not(:active) {
   background-color: var(--purple-hover) !important;
   color: var(--text-strong) !important;
-  border-color: rgba(166, 107, 201, 0.45) !important;
+  border-color: rgba(166, 107, 201, 0.5) !important;
   transform: translateY(-1px);
 }
 
@@ -451,17 +538,27 @@ button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.
   transform: scale(0.98);
 }
 
-/* Tertiary / Ghost Button: Slate Blue Text #6FA8D2 */
+.btn-secondary:disabled,
+.btn-purple:disabled,
+.btn-dark:disabled {
+  background-color: #271433 !important;
+  color: #8B719B !important;
+  border-color: rgba(166, 107, 201, 0.15) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* 3. Tertiary / Ghost Button: Slate Blue Text #6FA8D2 (5.8:1 contrast) */
 .btn-ghost,
 .btn-tertiary {
   background-color: transparent !important;
   color: var(--blue-text) !important;
   border: 1px solid transparent !important;
   border-radius: 8px !important;
-  font-size: 14px !important;
+  font-size: 14px;
   font-weight: 500 !important;
-  height: 40px;
-  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -481,37 +578,55 @@ button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.
   color: var(--blue-pressed) !important;
 }
 
-/* Danger Button: Danger Outline #FB7185 */
-.btn-danger {
+.btn-ghost:disabled,
+.btn-tertiary:disabled {
   background-color: transparent !important;
+  color: #4A5B6E !important;
+  border-color: transparent !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* 4. Danger Button: Rose #FB7185 (6.1:1 contrast) */
+.btn-danger {
+  background-color: rgba(251, 113, 133, 0.12) !important;
   color: var(--danger) !important;
-  border: 1px solid var(--danger) !important;
+  border: 1px solid rgba(251, 113, 133, 0.35) !important;
   border-radius: 8px !important;
-  font-size: 14px !important;
+  font-size: 14px;
   font-weight: 600 !important;
-  height: 40px;
-  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
 }
 
 .btn-danger:hover:not(:disabled):not(:active) {
-  background-color: rgba(251, 113, 133, 0.15) !important;
+  background-color: rgba(251, 113, 133, 0.22) !important;
+  color: #FDA4AF !important;
   transform: translateY(-1px);
 }
 
 .btn-danger:active:not(:disabled) {
-  background-color: rgba(251, 113, 133, 0.25) !important;
+  background-color: rgba(251, 113, 133, 0.32) !important;
+  color: #FFFFFF !important;
 }
 
-/* Icon Buttons */
+.btn-danger:disabled {
+  background-color: #241316 !important;
+  color: #7B3E48 !important;
+  border-color: rgba(251, 113, 133, 0.15) !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* 5. Icon Buttons: minimum 32px click area */
 .btn-icon {
   width: 32px !important;
   height: 32px !important;
   min-width: 32px !important;
+  min-height: 32px !important;
   padding: 0 !important;
   border-radius: 8px !important;
   display: inline-flex !important;
@@ -530,7 +645,56 @@ button[type="submit"]:not(.btn-secondary):not(.btn-danger):not(.btn-ghost):not(.
   border-color: var(--border-subtle) !important;
 }
 
-/* Visible Keyboard Focus: 2px gold-text with 2px offset */
+.btn-icon:active:not(:disabled) {
+  transform: scale(0.96);
+  background-color: var(--surface-2) !important;
+}
+
+.btn-icon:disabled {
+  background-color: transparent !important;
+  color: #4A5B6E !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+/* 6. Segmented / Toggle Buttons */
+.btn-segmented,
+.btn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 150ms ease-out;
+}
+
+.btn-segmented[aria-pressed="true"],
+.btn-toggle[aria-pressed="true"],
+.btn-segmented.btn-selected,
+.btn-toggle.btn-selected {
+  background-color: var(--gold) !important;
+  color: #1A1A1A !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.btn-segmented[aria-pressed="false"],
+.btn-toggle[aria-pressed="false"] {
+  background-color: transparent !important;
+  color: var(--text-muted) !important;
+}
+
+.btn-segmented[aria-pressed="false"]:hover,
+.btn-toggle[aria-pressed="false"]:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: var(--text-strong) !important;
+}
+
+/* Visible Keyboard Focus: 2px gold-text with 2px canvas offset */
 button:focus-visible,
 [role="button"]:focus-visible,
 input:focus-visible,
@@ -542,7 +706,7 @@ a:focus-visible {
   transition: box-shadow 150ms ease-out;
 }
 
-/* Radial ripple wave effect: Gold at 15% alpha, never white */
+/* Radial ripple wave effect: Gold at 15% alpha, strictly below label */
 .btn-ripple-wave {
   position: absolute;
   border-radius: 50%;
@@ -551,7 +715,7 @@ a:focus-visible {
   opacity: 0.15;
   transition: transform 300ms ease-out, opacity 300ms ease-out;
   background-color: var(--gold) !important;
-  z-index: 10;
+  z-index: -1 !important;
 }
 
 /* ==========================================================================
@@ -1063,6 +1227,7 @@ tr.row-new {
 .card-stagger-2 { animation: cardFadeUp 250ms var(--ease-out) 40ms forwards; }
 .card-stagger-3 { animation: cardFadeUp 250ms var(--ease-out) 80ms forwards; }
 .card-stagger-4 { animation: cardFadeUp 250ms var(--ease-out) 120ms forwards; }
+.book-card-enter { animation: cardFadeUp 200ms var(--ease-out) forwards; }
 
 @keyframes cardFadeUp {
   from { opacity: 0; transform: translateY(12px); }
@@ -1480,6 +1645,66 @@ header::after {
     opacity: 1 !important;
   }
 }
+
+/* --- URDU LANGUAGE, TYPOGRAPHY & RTL SUPPORT --- */
+.font-urdu {
+  font-family: var(--font-urdu);
+  line-height: 2 !important;
+}
+
+[dir="auto"] {
+  unicode-bidi: plaintext;
+}
+
+/* Ensure all table rows maintain minimum height 48px */
+table tbody tr {
+  min-height: 48px;
+}
+
+/* Text inputs and editable controls with automatic direction */
+input[dir="auto"],
+textarea[dir="auto"] {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* ==========================================================================
+   18. ULM CREST INSTITUTIONAL WATERMARK (BEHIND MAIN CONTENT SCREENS)
+   ========================================================================== */
+
+.watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(52vh, 520px);
+  height: min(52vh, 520px);
+  max-width: 520px;
+  max-height: 520px;
+  background-image: url('./assets/brand/ulm-crest.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.065;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  image-rendering: auto;
+}
+
+/* Switch off watermark completely when html.no-watermark is present */
+html.no-watermark .watermark {
+  display: none !important;
+}
+
+/* Ensure print preview and thermal labels NEVER show watermark */
+@media print {
+  .watermark {
+    display: none !important;
+  }
+}
+
+
 
 
 

@@ -1,24 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { 
   ArrowRightLeft, 
-  Search, 
-  CheckCircle, 
-  AlertTriangle, 
   RotateCcw, 
   User, 
   BookOpen, 
-  Barcode as BarcodeIcon,
-  PlusCircle,
-  Clock,
-  LayoutGrid,
-  List,
-  Calendar,
-  X,
-  Loader2,
-  Check
+  Barcode as BarcodeIcon, 
+  Plus, 
+  Clock, 
+  Calendar, 
+  X, 
+  Loader2, 
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { Transaction, Book, Borrower } from '../types/library';
 import CustomSelect from './ui/CustomSelect';
+import { PageHeaderCard } from './shared/PageHeaderCard';
+import { SearchFilterBar } from './shared/SearchFilterBar';
+import { TabCards, TabCardItem } from './shared/TabCards';
+import { ItemCard } from './shared/SharedCards';
+import { StatusPill } from './shared/StatusPill';
+import { DataTable, ColumnDef } from './shared/DataTable';
+import { SharedCountService } from '../services/sharedCountService';
 
 interface CirculationDeskProps {
   transactions: Transaction[];
@@ -41,8 +44,8 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'OVERDUE' | 'RETURNED'>('ALL');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
-  
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
   // Issue modal/form inline controls
   const [isIssuing, setIsIssuing] = useState(false);
   const [selectedBookId, setSelectedBookId] = useState('');
@@ -50,9 +53,14 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
   const [loanPeriodDays, setLoanPeriodDays] = useState(14);
   const [issueError, setIssueError] = useState<string | null>(null);
   const [issueButtonState, setIssueButtonState] = useState<'idle' | 'loading' | 'success'>('idle');
-  const [returningTxState, setReturningTxState] = useState<Record<string, 'loading' | 'success'>>({});
+  const [returningTxState, setReturningTxState] = useState<Record<string, 'loading' | 'success' | 'idle'>>({});
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Shared aggregates calculation (Part 1.8)
+  const sharedCounts = useMemo(() => {
+    return SharedCountService.computeCounts(books, borrowers, transactions, todayStr);
+  }, [books, borrowers, transactions, todayStr]);
 
   // Active available books for issue
   const availableBooks = useMemo(() => {
@@ -74,23 +82,17 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
         (t.barcode && t.barcode.toLowerCase().includes(query)) ||
         (t.student_id && t.student_id.toLowerCase().includes(query));
 
-      const isOverdue = t.status === 'OVERDUE' || (t.status === 'ACTIVE' && t.due_date < todayStr);
+      const isReturned = t.status === 'RETURNED' || Boolean(t.return_date);
+      const isOverdue = !isReturned && (t.status === 'OVERDUE' || (t.due_date && t.due_date < todayStr));
+      const isActive = !isReturned && !isOverdue;
 
       if (statusFilter === 'ALL') return matchesQuery;
       if (statusFilter === 'OVERDUE') return matchesQuery && isOverdue;
-      if (statusFilter === 'ACTIVE') return matchesQuery && t.status === 'ACTIVE' && !isOverdue;
-      if (statusFilter === 'RETURNED') return matchesQuery && t.status === 'RETURNED';
+      if (statusFilter === 'ACTIVE') return matchesQuery && isActive;
+      if (statusFilter === 'RETURNED') return matchesQuery && isReturned;
       return matchesQuery;
     });
   }, [transactions, searchQuery, statusFilter, todayStr]);
-
-  const activeLoansCount = useMemo(() => {
-    return transactions.filter(t => t.status === 'ACTIVE' && t.due_date >= todayStr).length;
-  }, [transactions, todayStr]);
-
-  const overdueCount = useMemo(() => {
-    return transactions.filter(t => t.status === 'OVERDUE' || (t.status === 'ACTIVE' && t.due_date < todayStr)).length;
-  }, [transactions, todayStr]);
 
   const handleCreateIssue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,48 +140,232 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
     }, 200);
   };
 
-  return (
-    <div className="flex-1 w-full bg-fluent-matrix px-4 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-y-auto space-y-6">
-      <div className="max-w-[1920px] mx-auto space-y-6">
+  // Helper to calculate days overdue
+  const getDaysOverdue = (dueDateStr: string): number => {
+    if (!dueDateStr) return 0;
+    const dueTime = new Date(dueDateStr).getTime();
+    const todayTime = new Date(todayStr).getTime();
+    const diff = Math.floor((todayTime - dueTime) / (1000 * 3600 * 24));
+    return Math.max(0, diff);
+  };
 
-        {/* Header & Quick Issue Toggle */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-4 sm:p-5 shadow-2xs transition-colors">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-[#F1F5F9] flex items-center gap-2">
-              <ArrowRightLeft className="w-5 h-5 text-amber-500" />
-              <span>Circulation Desk & Loan Registry</span>
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Process campus checkouts, returns, loan renewals, and overdue records.
-            </p>
-          </div>
+  // Helper for initials
+  const getInitials = (name: string): string => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
+  // Four COUNT tab-cards for Section 2.2
+  const filterTabItems: TabCardItem<'ALL' | 'ACTIVE' | 'OVERDUE' | 'RETURNED'>[] = [
+    {
+      id: 'ALL',
+      label: 'All Loans',
+      count: transactions.length,
+      accentColor: '#A66BC9', // purple
+    },
+    {
+      id: 'ACTIVE',
+      label: 'Active Loans',
+      count: Math.max(0, sharedCounts.activeLoans - sharedCounts.overdueLoans),
+      accentColor: '#34D399', // green
+    },
+    {
+      id: 'OVERDUE',
+      label: 'Overdue',
+      count: sharedCounts.overdueLoans,
+      accentColor: '#FB7185', // danger
+    },
+    {
+      id: 'RETURNED',
+      label: 'Returned',
+      count: sharedCounts.totalReturned,
+      accentColor: '#B3AABD', // muted
+    },
+  ];
+
+  // List View Columns
+  const listColumns: ColumnDef<Transaction>[] = [
+    {
+      header: 'ID',
+      width: '100px',
+      cell: (tx) => (
+        <span className="font-mono text-[12px] text-[#B3AABD] font-semibold">
+          {tx.id}
+        </span>
+      ),
+    },
+    {
+      header: 'Status',
+      width: '130px',
+      cell: (tx) => {
+        const isReturned = tx.status === 'RETURNED' || Boolean(tx.return_date);
+        const isOverdue = !isReturned && (tx.status === 'OVERDUE' || (tx.due_date && tx.due_date < todayStr));
+        if (isReturned) return <StatusPill label="Returned" variant="muted" dot />;
+        if (isOverdue) return <StatusPill label="Overdue" variant="danger" dot />;
+        return <StatusPill label="Active Loan" variant="green" dot />;
+      },
+    },
+    {
+      header: 'Book Title',
+      cell: (tx) => (
+        <div className="min-w-[180px]">
           <button
-            onClick={() => {
-              setIsIssuing(!isIssuing);
-              setIssueError(null);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+            type="button"
+            onClick={() => onOpenBookDetails(tx.book_id)}
+            className="text-[13px] font-semibold text-white hover:text-[#E0B450] text-left transition-colors cursor-pointer truncate max-w-[280px] block"
+            title={tx.book_name}
+            dir="auto"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>{isIssuing ? 'Cancel Issue' : 'Issue Book to Member'}</span>
+            {tx.book_name}
           </button>
+          <span className="font-mono text-[11px] text-[#B3AABD] flex items-center gap-1 mt-0.5">
+            <BarcodeIcon className="w-3 h-3 text-[#BC881B]" />
+            <span>{tx.barcode}</span>
+          </span>
         </div>
+      ),
+    },
+    {
+      header: 'Borrower',
+      cell: (tx) => (
+        <div className="flex items-center gap-2 min-w-[170px]">
+          <div className="w-7 h-7 rounded-full bg-[#541A72]/30 border border-[#A66BC9]/30 text-[#C084FC] flex items-center justify-center font-bold text-[10px] shrink-0">
+            {getInitials(tx.borrower_name || '')}
+          </div>
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={() => onOpenBorrowerDetails(tx.borrower_id)}
+              className="text-[13px] font-semibold text-white hover:text-[#E0B450] text-left transition-colors cursor-pointer truncate max-w-[150px] block"
+              title={tx.borrower_name}
+              dir="auto"
+            >
+              {tx.borrower_name}
+            </button>
+            <span className="font-mono text-[11px] font-bold text-[#E0B450]">
+              {tx.student_id}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Issued Date',
+      cell: (tx) => (
+        <span className="font-mono text-[12px] text-[#B3AABD]">
+          {tx.issue_date || 'N/A'}
+        </span>
+      ),
+    },
+    {
+      header: 'Due Date',
+      cell: (tx) => {
+        const isReturned = tx.status === 'RETURNED' || Boolean(tx.return_date);
+        const isOverdue = !isReturned && (tx.status === 'OVERDUE' || (tx.due_date && tx.due_date < todayStr));
+        const daysOverdue = isOverdue ? getDaysOverdue(tx.due_date) : 0;
+
+        return (
+          <div className="flex items-center gap-2">
+            <span className={`font-mono text-[13px] ${isOverdue ? 'text-rose-400 font-bold' : 'text-white'}`}>
+              {tx.due_date || 'N/A'}
+            </span>
+            {isOverdue && daysOverdue > 0 && (
+              <StatusPill label={`${daysOverdue}d overdue`} variant="danger" />
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Action',
+      align: 'right',
+      width: '160px',
+      cell: (tx) => {
+        const isReturned = tx.status === 'RETURNED' || Boolean(tx.return_date);
+        if (isReturned) {
+          return (
+            <span className="text-[12px] font-mono text-[#B3AABD] flex items-center justify-end gap-1">
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Returned {tx.return_date || ''}</span>
+            </span>
+          );
+        }
+
+        const state = returningTxState[tx.id] || 'idle';
+
+        return (
+          <button
+            type="button"
+            onClick={() => handleReturnAction(tx.id)}
+            disabled={state !== 'idle'}
+            className="h-9 px-3.5 rounded-[8px] border border-[#34D399]/40 text-[#34D399] hover:bg-[rgba(52,211,153,0.12)] active:scale-95 text-[12px] font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer ml-auto"
+            title="Return checked out volume"
+          >
+            {state === 'loading' ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Returning...</span>
+              </>
+            ) : state === 'success' ? (
+              <>
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Returned</span>
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Return Copy</span>
+              </>
+            )}
+          </button>
+        );
+      },
+    },
+  ];
+
+  return (
+    <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-5 sm:py-6 overflow-y-auto space-y-6">
+      <div className="max-w-[1920px] mx-auto space-y-5">
+
+        {/* 2.1 Header Card with swap-arrows icon & ONE gold primary button */}
+        <PageHeaderCard
+          title="Circulation Desk & Loan Registry"
+          subtitle="Process campus checkouts, returns, loan renewals, and overdue records."
+          icon={ArrowRightLeft}
+          actions={
+            <button
+              type="button"
+              onClick={() => {
+                setIsIssuing(!isIssuing);
+                setIssueError(null);
+              }}
+              className="h-10 px-4 rounded-[10px] bg-gradient-to-r from-[#BC881B] to-[#D4A02A] hover:from-[#D4A02A] hover:to-[#E0B450] text-[#1A1A1A] font-bold text-[13px] shadow-[0_2px_12px_rgba(188,136,27,0.35)] hover:shadow-[0_4px_16px_rgba(188,136,27,0.5)] border border-[#E0B450]/40 transition-all duration-150 inline-flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              title="Open Issue Book Form"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>{isIssuing ? 'Cancel Issue' : 'Issue Book to Member'}</span>
+            </button>
+          }
+        />
 
         {/* Issue Drawer Form */}
         {isIssuing && (
           <form 
             onSubmit={handleCreateIssue}
-            className="bg-[#020617] border border-amber-500/40 rounded-xl p-5 sm:p-6 shadow-sm space-y-4 animate-in fade-in duration-150"
+            className="rounded-[14px] bg-[#1A1A1A] border border-[#BC881B]/50 p-5 sm:p-6 shadow-[0_8px_30px_rgba(0,0,0,0.5)] space-y-4 animate-in fade-in duration-200"
           >
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1E293B] pb-3">
-              <div className="flex items-center gap-2 text-[#F1F5F9] font-semibold text-sm">
-                <BookOpen className="w-4 h-4 text-amber-500" />
+            <div className="flex items-center justify-between border-b border-[#2E2A33] pb-3">
+              <div className="flex items-center gap-2 text-white font-bold text-sm">
+                <BookOpen className="w-4 h-4 text-[#E0B450]" />
                 <span>New Book Issue Transaction</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="hidden sm:inline-block text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                  Auto-updates catalog stock
+              <div className="flex items-center gap-3">
+                <span className="hidden sm:inline-block text-[11px] font-mono text-[#B3AABD]">
+                  Auto-updates catalog shelf availability
                 </span>
                 <button
                   type="button"
@@ -187,7 +373,7 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                     setIsIssuing(false);
                     setIssueError(null);
                   }}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-1 rounded-[6px] text-[#B3AABD] hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
                   title="Close Issue Form"
                   aria-label="Close"
                 >
@@ -197,17 +383,17 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
             </div>
 
             {issueError && (
-              <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              <div className="p-3 rounded-[10px] bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>{issueError}</span>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Select Book */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 tracking-wide">
-                  Select Book Title (Available Stock) <span className="text-amber-500">*</span>
+                <label className="block text-xs font-semibold text-[#E7E2EC] mb-2 tracking-wide">
+                  Select Book Title (Available Stock) <span className="text-[#E0B450]">*</span>
                 </label>
                 <CustomSelect
                   value={selectedBookId}
@@ -220,13 +406,14 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                     badge: `${b.available_quantity} Avail`
                   }))}
                   searchable
+                  variant="dark"
                 />
               </div>
 
               {/* Select Borrower */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 tracking-wide">
-                  Select Borrower (Member) <span className="text-amber-500">*</span>
+                <label className="block text-xs font-semibold text-[#E7E2EC] mb-2 tracking-wide">
+                  Select Borrower (Member) <span className="text-[#E0B450]">*</span>
                 </label>
                 <CustomSelect
                   value={selectedBorrowerId}
@@ -239,12 +426,13 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                     badge: b.role || 'Member'
                   }))}
                   searchable
+                  variant="dark"
                 />
               </div>
 
               {/* Loan Period */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 tracking-wide">
+                <label className="block text-xs font-semibold text-[#E7E2EC] mb-2 tracking-wide">
                   Loan Period Duration
                 </label>
                 <CustomSelect
@@ -256,396 +444,243 @@ export const CirculationDeskView: React.FC<CirculationDeskProps> = ({
                     { value: 30, label: '30 Days (Faculty / Research Loan)' },
                     { value: 60, label: '60 Days (Semester Extended Grant)' }
                   ]}
+                  variant="dark"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#2E2A33]">
               <button
                 type="button"
-                onClick={() => setIsIssuing(false)}
-                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold tracking-wide transition-colors"
+                onClick={() => {
+                  setIsIssuing(false);
+                  setIssueError(null);
+                }}
+                className="px-4 h-10 rounded-[8px] bg-white/[0.06] hover:bg-white/[0.12] text-[#B3AABD] hover:text-white text-xs font-semibold transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={issueButtonState !== 'idle'}
-                className="min-w-[155px] px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs shadow-md tracking-wide transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="px-5 h-10 rounded-[8px] bg-[#BC881B] hover:bg-[#D4A02A] text-[#1A1A1A] text-xs font-bold shadow-md transition-all cursor-pointer inline-flex items-center gap-2"
               >
                 {issueButtonState === 'loading' ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Processing...</span>
-                  </span>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Validating & Issuing...</span>
+                  </>
                 ) : issueButtonState === 'success' ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-950 font-bold animate-in zoom-in-75 duration-200">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Issued</span>
-                  </span>
+                  <>
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>Loan Issued!</span>
+                  </>
                 ) : (
-                  <span>Commit Loan Issue</span>
+                  <>
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <span>Confirm & Issue Loan</span>
+                  </>
                 )}
               </button>
             </div>
           </form>
         )}
 
-        {/* Filter Bar */}
-        <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs transition-colors">
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by student, ID, book title, or barcode..."
-              className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg pl-9 pr-9 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-amber-500 search-input-expand"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="search-clear-icon absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
-                title="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+        {/* 2.2 Filters: Four COUNT tab-cards */}
+        <TabCards
+          variant="count"
+          items={filterTabItems}
+          activeId={statusFilter}
+          onChange={(id) => setStatusFilter(id)}
+        />
 
-          {/* Segmented Status Filter */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#020617] p-1 rounded-lg border border-slate-200 dark:border-[#334155]">
-            <button
-              onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === 'ALL' 
-                  ? 'bg-slate-800 text-[#F1F5F9] shadow-2xs font-semibold' 
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              All Loans ({transactions.length})
-            </button>
-            <button
-              onClick={() => setStatusFilter('ACTIVE')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === 'ACTIVE' 
-                  ? 'bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-2xs font-semibold' 
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              Active ({activeLoansCount})
-            </button>
-            <button
-              onClick={() => setStatusFilter('OVERDUE')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === 'OVERDUE' 
-                  ? 'bg-slate-800 text-rose-700 dark:text-rose-400 shadow-2xs font-semibold' 
-                  : 'text-slate-500 hover:text-rose-600 dark:hover:text-rose-400'
-              }`}
-            >
-              Overdue ({overdueCount})
-            </button>
-            <button
-              onClick={() => setStatusFilter('RETURNED')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === 'RETURNED' 
-                  ? 'bg-slate-800 text-[#F1F5F9] shadow-2xs font-semibold' 
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              Returned
-            </button>
-          </div>
+        {/* 2.2 Search & Segmented View Toggle */}
+        <SearchFilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search by student, University ID, book title, or barcode..."
+          viewMode={viewMode}
+          onViewModeChange={(mode) => setViewMode(mode as 'grid' | 'list')}
+          viewModeLabels={{ grid: 'Grid View', list: 'List View' }}
+        />
 
-          {/* Grid View / List View Segmented Switcher */}
-          <div className="flex items-center bg-slate-100 dark:bg-[#020617] border border-slate-200 dark:border-[#334155] rounded-lg p-1 gap-1">
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'grid' 
-                  ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200/80 dark:border-slate-700' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-              title="Switch to Card Grid View"
-              aria-label="Grid View"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Grid View</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                viewMode === 'list' 
-                  ? 'bg-[#1E293B] text-[#F1F5F9] shadow-xs border border-slate-200/80 dark:border-slate-700' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-              title="Switch to Table List View"
-              aria-label="List View"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>List View</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Transactions Display: Grid View or Table View */}
+        {/* 2.3 & 2.4 Transactions Display (Grid or List View) */}
         {filteredTxs.length === 0 ? (
-          <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl p-12 text-center text-slate-500 dark:text-slate-400 space-y-3 shadow-2xs">
-            <ArrowRightLeft className="w-12 h-12 mx-auto text-slate-400 dark:text-slate-600" />
-            <h4 className="text-base font-semibold text-slate-900 dark:text-slate-200">No circulation records found</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              No active or past loans match your current search and status filter.
+          <div className="rounded-[14px] bg-[#1A1A1A] border border-[#2E2A33] p-12 text-center text-[#B3AABD] space-y-3 shadow-md">
+            <ArrowRightLeft className="w-12 h-12 mx-auto text-[#6F6879]" />
+            <h4 className="text-base font-semibold text-white">No circulation records found</h4>
+            <p className="text-xs text-[#B3AABD] max-w-md mx-auto">
+              No active or past loans match your current search query and status filter.
             </p>
             <button
+              type="button"
               onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }}
-              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E293B] dark:hover:bg-[#334155] text-slate-800 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+              className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold rounded-[8px] border border-[#2E2A33] transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
               Reset Circulation Filters
             </button>
           </div>
         ) : viewMode === 'grid' ? (
-          /* Grid View of Transaction Cards */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredTxs.map((tx) => {
-              const isOverdue = tx.status === 'OVERDUE' || (tx.status === 'ACTIVE' && tx.due_date < todayStr);
-              const isReturned = tx.status === 'RETURNED';
+          /* 2.3 Loan Card (Grid View) - Minimum 320px with staggered entrance animation */
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+            {filteredTxs.map((tx, idx) => {
+              const isReturned = tx.status === 'RETURNED' || Boolean(tx.return_date);
+              const isOverdue = !isReturned && (tx.status === 'OVERDUE' || (tx.due_date && tx.due_date < todayStr));
+              const daysOverdue = isOverdue ? getDaysOverdue(tx.due_date) : 0;
+              const returnState = returningTxState[tx.id] || 'idle';
+
+              // 4px left status bar color
+              const statusColor = isReturned ? '#6F6879' : isOverdue ? '#FB7185' : '#34D399';
 
               return (
-                <div
+                <ItemCard
                   key={tx.id}
-                  className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] hover:border-slate-300 dark:hover:border-slate-700 rounded-xl overflow-hidden shadow-2xs hover:shadow-md flex flex-col justify-between group transition-all duration-200"
+                  className="relative flex flex-col justify-between pl-5 pr-4 py-4 space-y-3.5 min-h-[260px]"
+                  style={
+                    idx < 12
+                      ? {
+                          animation: `fadeUp 200ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 30}ms forwards`,
+                        }
+                      : undefined
+                  }
                 >
-                  <div className="p-4 space-y-3">
-                    {/* Header: Transaction ID + Status Pill */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono-code text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                        {tx.id}
-                      </span>
-                      {isReturned ? (
-                        <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
-                          Returned
-                        </span>
-                      ) : isOverdue ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                          <span>OVERDUE</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                          <CheckCircle className="w-3 h-3 text-emerald-500" />
-                          <span>Active Loan</span>
-                        </span>
-                      )}
-                    </div>
+                  {/* 4px status bar on the left edge */}
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 w-[4px]" 
+                    style={{ backgroundColor: statusColor }} 
+                  />
 
-                    {/* Book Information */}
-                    <div>
-                      <h4
-                        onClick={() => onOpenBookDetails(tx.book_id)}
-                        className="font-header text-sm font-bold text-[#F1F5F9] hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer transition-colors line-clamp-2 leading-snug"
-                        title={tx.book_name}
-                      >
-                        {tx.book_name || 'Book title'}
-                      </h4>
-                      <div className="flex items-center gap-1.5 text-[11px] font-mono-code text-slate-500 dark:text-slate-400 mt-1">
-                        <BarcodeIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{tx.barcode}</span>
+                  {/* Row 1: Transaction ID + Status Pill */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[12px] font-semibold text-[#B3AABD]">
+                      {tx.id}
+                    </span>
+                    {isReturned ? (
+                      <StatusPill label="Returned" variant="muted" dot />
+                    ) : isOverdue ? (
+                      <StatusPill label="OVERDUE" variant="danger" dot />
+                    ) : (
+                      <StatusPill label="Active Loan" variant="green" dot />
+                    )}
+                  </div>
+
+                  {/* Title & ISBN */}
+                  <div className="space-y-1">
+                    <h3
+                      onClick={() => onOpenBookDetails(tx.book_id)}
+                      className="text-[16px] font-semibold text-white hover:text-[#E0B450] cursor-pointer transition-colors line-clamp-2 leading-snug"
+                      title={tx.book_name}
+                      dir="auto"
+                    >
+                      {tx.book_name}
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-[12px] font-mono text-[#B3AABD]">
+                      <BarcodeIcon className="w-3.5 h-3.5 text-[#BC881B] shrink-0" />
+                      <span>{tx.barcode}</span>
+                    </div>
+                  </div>
+
+                  {/* Borrower Row: 38px avatar, name, and gold university ID chip */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#2E2A33]">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-[38px] h-[38px] rounded-full bg-[#541A72]/30 border border-[#A66BC9]/30 text-[#C084FC] flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                        {getInitials(tx.borrower_name || '')}
                       </div>
-                    </div>
-
-                    {/* Borrower Information */}
-                    <div className="bg-slate-50 dark:bg-[#020617] rounded-lg p-2.5 border border-slate-200/80 dark:border-[#1E293B] space-y-0.5">
-                      <div className="flex items-center justify-between gap-1">
-                        <button
+                      <div className="min-w-0">
+                        <span
                           onClick={() => onOpenBorrowerDetails(tx.borrower_id)}
-                          className="font-semibold text-xs text-slate-800 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition-colors truncate text-left"
+                          className="text-[14px] font-semibold text-white hover:text-[#E0B450] cursor-pointer transition-colors block truncate max-w-[150px] sm:max-w-[180px]"
+                          title={tx.borrower_name}
+                          dir="auto"
                         >
-                          {tx.borrower_name || 'Borrower'}
-                        </button>
-                        <span className="font-mono-code text-[10.5px] text-slate-500 dark:text-slate-400 shrink-0">
-                          {tx.student_id}
+                          {tx.borrower_name}
                         </span>
                       </div>
                     </div>
 
-                    {/* Dates Display */}
-                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/50 dark:bg-black/20 p-2 rounded-lg border border-slate-200/60 dark:border-slate-800">
-                      <div>
-                        <span className="text-[10px] uppercase font-mono-code text-slate-400 block">Issued</span>
-                        <span className="font-mono-code text-slate-700 dark:text-slate-300 text-[11px]">{tx.issue_date}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-mono-code text-slate-400 block">Due Date</span>
-                        <span className={`font-mono-code text-[11px] font-semibold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                          {tx.due_date}
+                    <span className="px-2 py-0.5 rounded-[6px] text-[11px] font-mono font-bold bg-[rgba(188,136,27,0.14)] text-[#E0B450] border border-[#BC881B]/35 shrink-0">
+                      {tx.student_id}
+                    </span>
+                  </div>
+
+                  {/* Dates Row: 2 columns with calendar icons */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#2E2A33] text-xs">
+                    <div>
+                      <span className="text-[11px] font-mono uppercase tracking-[0.06em] text-[#B3AABD] flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-[#B3AABD]" />
+                        <span>ISSUED</span>
+                      </span>
+                      <p className="font-mono text-[14px] text-white mt-0.5">
+                        {tx.issue_date || 'N/A'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-mono uppercase tracking-[0.06em] text-[#B3AABD] flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-[#B3AABD]" />
+                        <span>DUE DATE</span>
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span className={`font-mono text-[14px] ${isOverdue ? 'text-rose-400 font-bold' : 'text-white'}`}>
+                          {tx.due_date || 'N/A'}
                         </span>
+                        {isOverdue && daysOverdue > 0 && (
+                          <StatusPill label={`${daysOverdue}d overdue`} variant="danger" />
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Card Action Footer */}
-                  <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-[#020617]/70 border-t border-slate-200 dark:border-[#1E293B] flex items-center justify-between gap-2">
-                    {!isReturned ? (
+                  {/* Footer Action: Return Copy (full width, 40px, green outline with return icon) */}
+                  <div className="pt-2">
+                    {isReturned ? (
+                      <div className="flex items-center justify-center gap-2 py-2 text-[12px] font-mono text-[#B3AABD] border-t border-[#2E2A33]">
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>Returned on {tx.return_date || tx.issue_date}</span>
+                      </div>
+                    ) : (
                       <button
+                        type="button"
                         onClick={() => handleReturnAction(tx.id)}
-                        disabled={!!returningTxState[tx.id]}
-                        className="w-full py-1.5 px-3 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                        disabled={returnState !== 'idle'}
+                        className="w-full h-10 rounded-[10px] border border-[#34D399]/40 text-[#34D399] hover:bg-[rgba(52,211,153,0.12)] active:scale-[0.98] font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                       >
-                        {returningTxState[tx.id] === 'loading' ? (
+                        {returnState === 'loading' ? (
                           <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Returning...</span>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Processing Return...</span>
                           </>
-                        ) : returningTxState[tx.id] === 'success' ? (
-                          <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold animate-in zoom-in-75 duration-200">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                            <span>Returned</span>
-                          </span>
+                        ) : returnState === 'success' ? (
+                          <>
+                            <Check className="w-4 h-4 stroke-[3]" />
+                            <span>Volume Returned</span>
+                          </>
                         ) : (
                           <>
-                            <RotateCcw className="w-3.5 h-3.5" />
+                            <RotateCcw className="w-4 h-4" />
                             <span>Return Copy</span>
                           </>
                         )}
                       </button>
-                    ) : (
-                      <span className="w-full text-center text-xs font-mono-code text-slate-400 py-1">
-                        Archived · Returned on {tx.return_date}
-                      </span>
                     )}
                   </div>
-                </div>
+                </ItemCard>
               );
             })}
           </div>
         ) : (
-          /* Table View */
-        <div className="bg-[#0F172A] border border-slate-200 dark:border-[#1E293B] rounded-xl overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-              <thead className="bg-slate-50 dark:bg-[#020617] text-slate-500 dark:text-slate-400 uppercase font-mono text-[10.5px] border-b border-slate-200 dark:border-[#1E293B]">
-                <tr>
-                  <th className="py-3 px-4 font-semibold">Tx ID</th>
-                  <th className="py-3 px-4 font-semibold">Title & Barcode</th>
-                  <th className="py-3 px-4 font-semibold">Borrower & Member ID</th>
-                  <th className="py-3 px-4 font-semibold">Issue Date</th>
-                  <th className="py-3 px-4 font-semibold">Due Date</th>
-                  <th className="py-3 px-4 text-center font-semibold">Status</th>
-                  <th className="py-3 px-4 text-right font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-[#1E293B]">
-                {filteredTxs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-10 text-center text-slate-400 dark:text-slate-500">
-                      No circulation records match your filter criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTxs.map((tx) => {
-                    const isOverdue = tx.status === 'OVERDUE' || (tx.status === 'ACTIVE' && tx.due_date < todayStr);
-                    const isReturned = tx.status === 'RETURNED';
-
-                    return (
-                      <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="py-3 px-4 font-mono text-slate-500 dark:text-slate-400 font-medium">
-                          {tx.id}
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => onOpenBookDetails(tx.book_id)}
-                            className="font-semibold text-[#F1F5F9] hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-left flex items-center gap-1.5 max-w-sm truncate"
-                          >
-                            <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="truncate">{tx.book_name || 'Book record'}</span>
-                          </button>
-                          <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                            <BarcodeIcon className="w-3 h-3 text-slate-400" />
-                            <span>{tx.barcode}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => onOpenBorrowerDetails(tx.borrower_id)}
-                            className="font-semibold text-slate-800 dark:text-slate-200 hover:text-amber-600 dark:hover:text-amber-400 transition-colors text-left flex items-center gap-1.5 truncate"
-                          >
-                            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{tx.borrower_name || 'Borrower'}</span>
-                          </button>
-                          <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                            {tx.student_id}
-                          </p>
-                        </td>
-                        <td className="py-3 px-4 font-mono tabular-nums text-slate-600 dark:text-slate-300">
-                          {tx.issue_date}
-                        </td>
-                        <td className="py-3 px-4 font-mono tabular-nums">
-                          <span className={isOverdue ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-600 dark:text-slate-300'}>
-                            {tx.due_date}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {isReturned ? (
-                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                              Returned ({tx.return_date})
-                            </span>
-                          ) : isOverdue ? (
-                            <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 inline-flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" />
-                              <span>OVERDUE</span>
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3" />
-                              <span>ON SCHEDULE</span>
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {!isReturned ? (
-                            <button
-                              onClick={() => handleReturnAction(tx.id)}
-                              disabled={!!returningTxState[tx.id]}
-                              className="px-2.5 py-1 rounded text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/30 transition-all inline-flex items-center gap-1 cursor-pointer"
-                              title="Process book return and restore copy to shelf"
-                            >
-                              {returningTxState[tx.id] === 'loading' ? (
-                                <>
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                  <span>Returning...</span>
-                                </>
-                              ) : returningTxState[tx.id] === 'success' ? (
-                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold animate-in zoom-in-75 duration-200">
-                                  <Check className="w-3 h-3 stroke-[3]" />
-                                  <span>Returned</span>
-                                </span>
-                              ) : (
-                                <>
-                                  <RotateCcw className="w-3 h-3" />
-                                  <span>Return Copy</span>
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 dark:text-slate-500">Archived</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          /* 2.4 List View (48px rows, status pills, due date and days overdue, 36px Return button) */
+          <DataTable
+            data={filteredTxs}
+            columns={listColumns}
+            keyExtractor={(tx) => tx.id}
+            rowHeightClass="min-h-[48px]"
+          />
         )}
 
       </div>
     </div>
   );
 };
+
 export default CirculationDeskView;

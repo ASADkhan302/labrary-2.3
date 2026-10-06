@@ -16,6 +16,7 @@
     <Copyright>Copyright © 2026 University of Lakki Marwat. All rights reserved.</Copyright>
     
     <!-- Single-File Windows Desktop Executable Publishing Config -->
+    <ApplicationIcon>icon.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

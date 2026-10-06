@@ -7,9 +7,11 @@ import {
   PanelLeftOpen, 
   QrCode, 
   RotateCw, 
-  HardDrive 
+  HardDrive,
+  AlertCircle
 } from 'lucide-react';
 import { NavigationTab } from '../types/library';
+import { ULM_CREST_SRC } from '../assets/brand/crestData';
 
 interface PrimaryHeaderProps {
   activeTab: NavigationTab;
@@ -26,6 +28,8 @@ interface PrimaryHeaderProps {
   onOpenSearch?: () => void;
   universityName?: string;
   libraryName?: string;
+  waitingBooksCount?: number;
+  onRetrySheetSync?: () => void;
 }
 
 export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
@@ -40,6 +44,8 @@ export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
   onToggleSidebar,
   universityName = 'University of Lakki Marwat',
   libraryName = 'Campus Catalog & Circulation',
+  waitingBooksCount = 0,
+  onRetrySheetSync,
 }) => {
   const [isRotating, setIsRotating] = useState(false);
 
@@ -52,9 +58,9 @@ export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
   return (
     <header className="w-full transition-colors duration-150 border-b shrink-0 z-40 select-none border-[var(--border)] bg-[var(--background)]">
       {/* Main Top Header Bar */}
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Left Side: Sidebar Toggle + Institutional Insignia + Breadcrumb */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-3.5 min-w-0">
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
@@ -70,34 +76,41 @@ export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
             </button>
           )}
 
-          {/* Insignia Shield */}
+          {/* Insignia Crest Badge (Round dark badge #141214 with 1px gold border) */}
           <div 
-            className="w-8 h-8 rounded-[8px] bg-blue-500/10 border border-blue-500/25 flex items-center justify-center shrink-0"
-            title="University of Lakki Marwat Official Insignia"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#141214] border border-[#BC881B]/40 flex items-center justify-center shrink-0 overflow-hidden shadow-md p-1 hover:border-[#BC881B] transition-colors"
+            title="University of Lakki Marwat Official Crest"
           >
-            <BookOpen className="w-4 h-4 text-[var(--text-accent)] stroke-[2]" />
+            <img 
+              src={ULM_CREST_SRC} 
+              alt="University of Lakki Marwat crest" 
+              width={40} 
+              height={40} 
+              className="w-full h-full object-contain"
+              style={{ imageRendering: 'auto' }}
+            />
           </div>
 
           <div className="flex flex-col justify-center min-w-0">
-            <span className="font-cinzel font-semibold text-[16px] sm:text-[18px] tracking-wide uppercase truncate leading-tight text-[var(--text-primary)]">
+            <span className="font-cinzel font-bold text-[19px] sm:text-[22px] md:text-[23px] tracking-[0.05em] uppercase truncate leading-none text-white drop-shadow-xs">
               {universityName}
             </span>
-            <span className="text-[12px] font-medium text-[var(--text-muted)] tracking-normal truncate leading-none mt-0.5">
+            <span className="text-[13px] sm:text-[14px] font-semibold text-blue-400 dark:text-blue-300 tracking-[0.08em] uppercase font-sans truncate leading-none mt-1">
               {libraryName}
             </span>
           </div>
         </div>
 
         {/* Right Section: Core Utility Actions */}
-        <div className="flex items-center justify-end gap-2 shrink-0">
+        <div className="flex items-center justify-end gap-2.5 shrink-0">
           {/* Quick Barcode Station Launcher */}
           {activeTab !== 'scanner' && activeTab !== 'catalog' && (
             <button
               onClick={() => onTabChange('scanner')}
-              className="btn-secondary h-8 px-3 text-[12px] hidden lg:inline-flex"
+              className="h-9 px-3.5 rounded-[10px] bg-[#541A72] hover:bg-[#6A2290] active:bg-[#3F1256] text-white border border-[#A66BC9]/30 text-[12px] font-semibold transition-all duration-150 hover:-translate-y-0.5 active:scale-95 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141214] hidden lg:inline-flex items-center justify-center gap-2 cursor-pointer"
               title="Barcode Scanner Station (⌘2)"
             >
-              <QrCode className="w-3.5 h-3.5 text-[var(--text-accent)]" />
+              <QrCode className="w-4 h-4 text-[#E0B450] shrink-0" />
               <span>Barcode Station</span>
             </button>
           )}
@@ -106,12 +119,12 @@ export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
           {onOpenStorageConfig && (
             <button
               onClick={onOpenStorageConfig}
-              className="btn-secondary h-8 px-3 text-[12px]"
+              className="h-9 px-3.5 rounded-[10px] bg-[#541A72] hover:bg-[#6A2290] active:bg-[#3F1256] text-white border border-[#A66BC9]/30 text-[12px] font-semibold transition-all duration-150 hover:-translate-y-0.5 active:scale-95 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141214] inline-flex items-center justify-center gap-2 max-w-[180px] sm:max-w-[220px] cursor-pointer"
               title={`Database Storage Directory: ${storageLocationPath || 'C:\\ULM_Library_Database'}. Click to configure storage location.`}
             >
-              <HardDrive className="w-3.5 h-3.5 text-[var(--text-accent)]" />
-              <span className="hidden md:inline font-mono text-[12px] truncate max-w-[120px]">
-                {storageLocationPath ? storageLocationPath.split('\\').pop() : 'Storage'}
+              <HardDrive className="w-4 h-4 text-[#E0B450] shrink-0" />
+              <span className="hidden md:inline font-mono text-[12px] truncate">
+                {storageLocationPath ? (storageLocationPath.split(/[\\/]/).pop() || storageLocationPath) : 'Storage'}
               </span>
             </button>
           )}
@@ -120,10 +133,10 @@ export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
           {onReloadData && (
             <button
               onClick={handleRefreshClick}
-              className="btn-secondary h-8 px-3 text-[12px]"
+              className="h-9 px-3.5 rounded-[10px] bg-[#541A72] hover:bg-[#6A2290] active:bg-[#3F1256] text-white border border-[#A66BC9]/30 text-[12px] font-semibold transition-all duration-150 hover:-translate-y-0.5 active:scale-95 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141214] inline-flex items-center justify-center gap-2 cursor-pointer"
               title="Synchronize UI with Database / Reload"
             >
-              <RotateCw className={`w-3.5 h-3.5 text-[var(--text-accent)] ${isRotating ? 'animate-spin' : ''}`} />
+              <RotateCw className={`w-4 h-4 text-[#E0B450] shrink-0 ${isRotating ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Sync Data</span>
             </button>
           )}
@@ -131,19 +144,33 @@ export const PrimaryHeader: React.FC<PrimaryHeaderProps> = ({
           {/* Export Center Trigger */}
           <button
             onClick={onQuickExport}
-            className="btn-secondary h-8 px-3 text-[12px]"
+            className="h-9 px-3.5 rounded-[10px] bg-[#541A72] hover:bg-[#6A2290] active:bg-[#3F1256] text-white border border-[#A66BC9]/30 text-[12px] font-semibold transition-all duration-150 hover:-translate-y-0.5 active:scale-95 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141214] inline-flex items-center justify-center gap-2 cursor-pointer"
             title="Export Catalog & Transactions to CSV"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
             <span className="hidden sm:inline">Export</span>
           </button>
+
+          {/* Sheet Write Waiting Indicator (Excel Lock) */}
+          {waitingBooksCount !== undefined && waitingBooksCount > 0 && (
+            <button
+              type="button"
+              onClick={onRetrySheetSync}
+              className="h-9 px-3 rounded-[8px] bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer animate-pulse"
+              title="Excel file lock detected. Close Excel and click here to synchronize."
+            >
+              <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>{waitingBooksCount} {waitingBooksCount === 1 ? 'book' : 'books'} waiting for the sheet - close Excel</span>
+            </button>
+          )}
 
           {/* Primary Action: Add Book */}
           <button
             onClick={onOpenAddBook}
-            className="btn-primary h-8 px-3 text-[12px]"
+            className="h-9 px-4 rounded-[10px] bg-gradient-to-r from-[#BC881B] to-[#D4A02A] hover:from-[#D4A02A] hover:to-[#E0B450] active:scale-95 text-[#1A1A1A] font-bold text-[12px] shadow-[0_2px_12px_rgba(188,136,27,0.35)] hover:shadow-[0_4px_16px_rgba(188,136,27,0.5)] border border-[#E0B450]/40 transition-all duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29658E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#141214] inline-flex items-center justify-center gap-2 cursor-pointer"
+            title="Add New Book Title to Catalog"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
             <span>Add Book</span>
           </button>
         </div>
