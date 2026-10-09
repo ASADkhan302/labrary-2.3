@@ -5,6 +5,7 @@ import { BarcodeService } from './barcodeService';
 import { UsbBackupService } from './usbBackupService';
 import { getTodayIso, normalizeDateAdded } from '../utils/dateUtils';
 import { isArabicOrUrduScript, sanitizeBidiOverrides, normalizeUrduForSearch } from '../utils/urduUtils';
+import { AlmariService } from './almariService';
 
 // ============================================================================
 // CONSTANTS & SAFETY LIMITS (Section 2)
@@ -50,6 +51,10 @@ export interface CleanedBookRow {
   dateAdded: string;
   language: string;
   barcode: string;
+  group?: string;
+  groupId?: string | null;
+  almariId?: string | null;
+  shelfNo?: number | null;
   warnings: string[];
 }
 
@@ -258,6 +263,8 @@ export class ImporterEngine {
       'date added': 'date_added',
       'date': 'date_added',
       'language': 'language',
+      'group': 'group',
+      'book group': 'group',
     };
 
     headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
@@ -620,6 +627,50 @@ export class ImporterEngine {
       const barcodeGen = BarcodeService.generateBarcode(cleanAccession, existingBarcodes);
       const barcode = barcodeGen.barcode;
 
+      // 15. Group & Almari suggestion
+      let groupName = '';
+      let assignedGroupId: string | null = null;
+      let assignedAlmariId: string | null = null;
+      let assignedShelfNo: number | null = null;
+
+      if (colMap['group']) {
+        const rawGroup = this.cleanCellText(row.getCell(colMap['group']).value);
+        if (rawGroup) {
+          groupName = rawGroup;
+          const allGroups = AlmariService.getGroups();
+          const match = allGroups.find(g => g.name_en.toLowerCase() === rawGroup.toLowerCase() || g.name_ur === rawGroup);
+          if (match) {
+            assignedGroupId = match.id;
+          } else {
+            // Auto create group or assign
+            const created = AlmariService.addGroup({
+              name_en: rawGroup,
+              name_ur: rawGroup,
+              color: '#3B82F6',
+              sort_order: allGroups.length + 1,
+              is_active: true,
+            });
+            assignedGroupId = created.id;
+          }
+        }
+      }
+
+      if (!assignedGroupId) {
+        const suggested = AlmariService.suggestGroup({ category: 'General Reference', language, book_name: rawTitle });
+        if (suggested) {
+          assignedGroupId = suggested.id;
+          groupName = suggested.name_en;
+        }
+      }
+
+      if (assignedGroupId) {
+        const suggestedLoc = AlmariService.suggestAlmariAndShelf(assignedGroupId, activeBooks);
+        if (suggestedLoc) {
+          assignedAlmariId = suggestedLoc.almari.id;
+          assignedShelfNo = suggestedLoc.shelf_no;
+        }
+      }
+
       // Add to ready rows
       readyRows.push({
         excelRowNumber: r,
@@ -639,6 +690,10 @@ export class ImporterEngine {
         dateAdded,
         language,
         barcode,
+        group: groupName || undefined,
+        groupId: assignedGroupId,
+        almariId: assignedAlmariId,
+        shelfNo: assignedShelfNo,
         warnings: rowWarnings,
       });
 
@@ -777,6 +832,9 @@ export class ImporterEngine {
             section: 'Main Stacks',
             dewey_call_number: '000 ULM',
             date_added: row.dateAdded,
+            group_id: row.groupId || null,
+            almari_id: row.almariId || null,
+            shelf_no: row.shelfNo || null,
             binding: row.binding,
             pages: row.pages,
             price: row.price,

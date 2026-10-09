@@ -23,10 +23,20 @@ import {
   ArrowUp,
   ArrowDown,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Building2,
+  Sparkles,
+  CheckSquare,
+  Library
 } from 'lucide-react';
 import { Book, Transaction } from '../types/library';
 import { CatalogChartsView } from './catalog/CatalogChartsView';
+import { AlmariView } from './catalog/AlmariView';
+import { AlmariErrorBoundary } from './catalog/AlmariErrorBoundary';
+import { BulkAssignModal } from './modals/BulkAssignModal';
+import { KpiCard } from './shared/SharedCards';
+import { AlmariService } from '../services/almariService';
+import { sortBooksCatalog } from '../utils/almariSortUtils';
 import { CountUp } from '@/components/ui/count-up';
 import { CardSkeleton, TableSkeleton } from '@/components/ui/skeleton';
 import CustomSelect from './ui/CustomSelect';
@@ -37,6 +47,7 @@ import { isArabicOrUrduScript, matchesUrduSearch } from '../utils/urduUtils';
 interface BooksCatalogViewProps {
   books: Book[];
   transactions: Transaction[];
+  initialViewMode?: 'grid' | 'list' | 'chart' | 'almari';
   onOpenAddBook: () => void;
   onSelectBook: (book: Book) => void;
   onEditBook: (book: Book) => void;
@@ -50,6 +61,7 @@ interface BooksCatalogViewProps {
 export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
   books,
   transactions,
+  initialViewMode,
   onOpenAddBook,
   onSelectBook,
   onEditBook,
@@ -70,7 +82,19 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
   });
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'chart'>('grid');
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState('ALL');
+  const [selectedAlmariFilter, setSelectedAlmariFilter] = useState('ALL');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'chart' | 'almari'>(initialViewMode || 'grid');
+
+  useEffect(() => {
+    if (initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode]);
+
+  // Bulk selection state
+  const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
+  const [bulkModalMode, setBulkModalMode] = useState<'assign_group' | 'assign_almari' | 'suggest_all_unassigned' | null>(null);
 
   // Quick keyboard shortcut: Pressing "/" or Ctrl+F focuses the catalog search input
   useEffect(() => {
@@ -134,7 +158,7 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
 
   // Filtered & sorted books
   const filteredBooks = useMemo(() => {
-    return activeBooks
+    const filtered = activeBooks
       .filter(book => {
         const query = searchQuery.trim();
         const matchesQuery = !query || 
@@ -163,9 +187,29 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
         const matchesDateFrom = !dateFrom || (bookDate && bookDate >= dateFrom);
         const matchesDateTo = !dateTo || (bookDate && bookDate <= dateTo);
 
-        return matchesQuery && matchesCategory && matchesStatus && matchesLanguage && matchesDateFrom && matchesDateTo;
-      })
-      .sort((a, b) => {
+        // Group filter
+        const matchesGroup = 
+          selectedGroupFilter === 'ALL' ||
+          (selectedGroupFilter === 'NO_GROUP' && !book.group_id) ||
+          book.group_id === selectedGroupFilter;
+
+        // Almari filter
+        const matchesAlmari = 
+          selectedAlmariFilter === 'ALL' ||
+          (selectedAlmariFilter === 'NO_ALMARI' && !book.almari_id) ||
+          book.almari_id === selectedAlmariFilter;
+
+        return matchesQuery && matchesCategory && matchesStatus && matchesLanguage && matchesDateFrom && matchesDateTo && matchesGroup && matchesAlmari;
+      });
+
+    // Check if using the high-performance Almari/Dewey sort modes
+    if (['almari_order', 'group_then_almari', 'dewey_decimal', 'shelf_location'].includes(sortBy)) {
+      const groupsMap = new Map(AlmariService.getGroups().map(g => [g.id, g]));
+      const almarisMap = new Map(AlmariService.getAlmaris().map(a => [a.id, a]));
+      return sortBooksCatalog(filtered, sortBy, groupsMap, almarisMap);
+    }
+
+    return [...filtered].sort((a: Book, b: Book) => {
         if (sortBy === 'newest_added') {
           const dateA = a.date_added || (a.created_at ? a.created_at.split(' ')[0] : '1970-01-01');
           const dateB = b.date_added || (b.created_at ? b.created_at.split(' ')[0] : '1970-01-01');
@@ -242,7 +286,7 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
         if (sortBy === 'year') return b.publication_year - a.publication_year;
         return 0;
       });
-  }, [activeBooks, searchQuery, selectedCategory, selectedStatus, selectedLanguage, sortBy, dateFrom, dateTo]);
+  }, [activeBooks, searchQuery, selectedCategory, selectedStatus, selectedLanguage, selectedGroupFilter, selectedAlmariFilter, sortBy, dateFrom, dateTo]);
 
   // Generate SVG-like barcode bars based on barcode string (always high contrast in light & dark)
   const renderBarcodeStrip = (code: string) => {
@@ -271,99 +315,72 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
     <div className="flex-1 w-full bg-fluent-matrix px-6 sm:px-8 py-7 overflow-y-auto space-y-7">
       <div className="max-w-[1920px] mx-auto space-y-7">
         
-        {/* Operational Collection Metrics (Institutional Library Standard) */}
+        {/* Operational Collection Metrics (Restyled Shared KPI Cards with Playfair Display) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {/* Metric 1: Cataloged Titles */}
-          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-1 min-h-[140px]">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#BC881B]" />
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Cataloged Titles</p>
-                <h3 className="text-[32px] font-bold text-white mt-1.5 tabular-nums leading-none tracking-tight">
-                  <CountUp end={totalTitles} durationMs={800} />
-                </h3>
-              </div>
-              <div className="w-11 h-11 rounded-[10px] bg-[#BC881B]/15 border border-[#BC881B]/30 flex items-center justify-center text-[#E0B450] shrink-0 shadow-2xs">
-                <BookOpen className="w-5 h-5 stroke-[2]" />
-              </div>
-            </div>
-            <p className="text-[12px] text-[#B3AABD] mt-3">
-              Across <span className="text-white font-medium">{categories.length}</span> disciplines
-            </p>
-          </div>
+          {/* Card 1: Cataloged Titles */}
+          <KpiCard
+            label="Cataloged Titles"
+            value={totalTitles}
+            note="Distinct records"
+            icon={BookOpen}
+            iconColor="#E0B450"
+            accentColor="#BC881B"
+            accentBarColor="#BC881B"
+            subLabel={`Across ${categories.length} academic disciplines`}
+          />
 
-          {/* Metric 2: Physical Volumes */}
-          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-2 min-h-[140px]">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#A66BC9]" />
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Physical Volumes</p>
-                <h3 className="text-[32px] font-bold text-white mt-1.5 tabular-nums leading-none tracking-tight">
-                  <CountUp end={totalCopies} durationMs={800} />
-                </h3>
-              </div>
-              <div className="w-11 h-11 rounded-[10px] bg-[#541A72]/30 border border-[#A66BC9]/30 flex items-center justify-center text-[#A66BC9] shrink-0 shadow-2xs">
-                <Layers className="w-5 h-5 stroke-[2]" />
-              </div>
-            </div>
-            <p className="text-[12px] text-[#B3AABD] mt-3">
-              <span className="text-white font-medium">{activeBorrowed}</span> currently in circulation
-            </p>
-          </div>
+          {/* Card 2: Physical Volumes */}
+          <KpiCard
+            label="Physical Volumes"
+            value={totalCopies}
+            note="Physical items"
+            icon={Layers}
+            iconColor="#A66BC9"
+            accentColor="#541A72"
+            accentBarColor="#A66BC9"
+            percentBar={{
+              value: totalCopies,
+              max: totalCopies,
+              color: 'linear-gradient(90deg, #541A72, #A66BC9)',
+            }}
+            fractionTooltip={`${totalCopies.toLocaleString()} total physical inventory items`}
+          />
 
-          {/* Metric 3: Shelf Availability */}
-          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-3 min-h-[140px]">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#BC881B]" />
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Shelf Availability</p>
-                <h3 className="text-[32px] font-bold text-emerald-400 mt-1.5 tabular-nums leading-none tracking-tight">
-                  <CountUp end={totalAvailable} durationMs={800} />
-                </h3>
-              </div>
-              <div className="w-11 h-11 rounded-[10px] bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-2xs">
-                <CheckCircle2 className="w-5 h-5 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2.5 space-y-1.5">
-              <div className="flex items-center justify-between text-[12px]">
-                <span className="text-[#B3AABD]">{availPercent}% available for loan</span>
-                <span className="text-emerald-400 font-mono text-[11px] font-semibold">{totalAvailable} / {totalCopies}</span>
-              </div>
-              <div className="w-full bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
-                  style={{ width: `${availPercent}%` }} 
-                />
-              </div>
-            </div>
-          </div>
+          {/* Card 3: Shelf Availability */}
+          <KpiCard
+            label="Shelf Availability"
+            value={totalAvailable}
+            note="Available now"
+            icon={CheckCircle2}
+            iconColor="#34D399"
+            accentColor="#10B981"
+            accentBarColor="#34D399"
+            percentBar={{
+              value: totalAvailable,
+              max: totalCopies,
+              color: 'linear-gradient(90deg, #059669, #34D399)',
+            }}
+            fractionTooltip={`${totalAvailable.toLocaleString()} / ${totalCopies.toLocaleString()} volumes on shelf`}
+          />
 
-          {/* Metric 4: Active Loans & Overdue */}
-          <div className="bg-gradient-to-b from-[#221F26] to-[#1A1A1A] border border-white/[0.08] rounded-[14px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.16] hover:shadow-[0_8px_24px_rgba(0,0,0,0.45)] transition-all duration-200 hover:-translate-y-1 relative overflow-hidden flex flex-col justify-between card-stagger-4 min-h-[140px]">
-            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#541A72]" />
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-wider">Active Loans</p>
-                <h3 className="text-[32px] font-bold text-white mt-1.5 tabular-nums leading-none tracking-tight">
-                  <CountUp end={activeBorrowed} durationMs={800} />
-                </h3>
-              </div>
-              <div className="w-11 h-11 rounded-[10px] bg-[#541A72]/30 border border-[#A66BC9]/30 flex items-center justify-center text-[#A66BC9] shrink-0 shadow-2xs">
-                <Clock className="w-5 h-5 stroke-[2]" />
-              </div>
-            </div>
-            <div className="mt-2.5 flex items-center min-h-[22px]">
-              {overdueCount > 0 ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[12px] font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-                  {overdueCount} overdue {overdueCount === 1 ? 'notice' : 'notices'}
-                </span>
-              ) : (
-                <span className="text-[12px] text-[#B3AABD]">All current (0 overdue)</span>
-              )}
-            </div>
-          </div>
+          {/* Card 4: Active Loans */}
+          <KpiCard
+            label="Active Loans"
+            value={activeBorrowed}
+            note={overdueCount > 0 ? `${overdueCount} overdue` : 'On loan'}
+            icon={Clock}
+            iconColor={activeBorrowed > 0 ? '#E0B450' : '#A66BC9'}
+            accentColor="#BC881B"
+            accentBarColor="#541A72"
+            isGoldNumber={activeBorrowed > 0}
+            isDanger={overdueCount > 0}
+            percentBar={{
+              value: activeBorrowed,
+              max: totalCopies > 0 ? totalCopies : 1,
+              color: overdueCount > 0 ? 'linear-gradient(90deg, #F43F5E, #FB7185)' : 'linear-gradient(90deg, #BC881B, #E0B450)',
+            }}
+            fractionTooltip={`${activeBorrowed.toLocaleString()} of ${totalCopies.toLocaleString()} volumes currently checked out`}
+          />
         </div>
 
         {/* Filter & Search Action Bar */}
@@ -466,6 +483,36 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
               />
             </div>
 
+            {/* Group filter select */}
+            <div className="w-44 min-w-[150px]">
+              <CustomSelect
+                value={selectedGroupFilter}
+                onChange={(val) => setSelectedGroupFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Groups' },
+                  { value: 'NO_GROUP', label: 'No group (Unassigned)' },
+                  ...AlmariService.getGroups().map(g => ({ value: g.id, label: g.name_en }))
+                ]}
+                searchable
+                variant="dark"
+              />
+            </div>
+
+            {/* Almari filter select */}
+            <div className="w-44 min-w-[150px]">
+              <CustomSelect
+                value={selectedAlmariFilter}
+                onChange={(val) => setSelectedAlmariFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Almaris' },
+                  { value: 'NO_ALMARI', label: 'No almari' },
+                  ...AlmariService.getAlmaris().map(a => ({ value: a.id, label: `${a.code} - ${a.name_en}` }))
+                ]}
+                searchable
+                variant="dark"
+              />
+            </div>
+
             {/* Sort select */}
             <div className="w-56 min-w-[210px]">
               <CustomSelect
@@ -474,6 +521,10 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                 options={[
                   { value: 'newest_added', label: 'Sort: Newest Added' },
                   { value: 'oldest_added', label: 'Sort: Oldest Added' },
+                  { value: 'almari_order', label: 'Sort: Almari order' },
+                  { value: 'group_then_almari', label: 'Sort: Group, then Almari' },
+                  { value: 'dewey_decimal', label: 'Sort: Call number (Dewey)' },
+                  { value: 'shelf_location', label: 'Sort: Shelf location' },
                   { value: 'accession', label: 'Sort: Accession (Asc)' },
                   { value: 'accession_desc', label: 'Sort: Accession (Desc)' },
                   { value: 'title', label: 'Sort: Title (A-Z / الف تا ے)' },
@@ -568,6 +619,21 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
                 <BarChart3 className="w-3.5 h-3.5" />
                 <span className="btn-label">Chart View</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('almari')}
+                aria-pressed={viewMode === 'almari'}
+                className={`btn-segmented flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-[12px] font-semibold transition-all duration-150 cursor-pointer ${
+                  viewMode === 'almari' 
+                    ? 'btn-selected bg-[#BC881B] text-[#1A1A1A] font-bold shadow-[0_2px_8px_rgba(188,136,27,0.35)]' 
+                    : 'text-[#B3AABD] hover:text-white hover:bg-white/[0.05]'
+                }`}
+                title="Switch to Almari & Shelves Visual View"
+                aria-label="Almari View"
+              >
+                <Library className="w-3.5 h-3.5" />
+                <span className="btn-label">Almari View</span>
+              </button>
             </div>
 
             {/* Batch Barcode Labels Generator */}
@@ -620,8 +686,17 @@ export const BooksCatalogView: React.FC<BooksCatalogViewProps> = ({
           </div>
         </div>
 
-        {/* Catalog Display: Chart View, Grid View or List View */}
-        {viewMode === 'chart' ? (
+        {/* Catalog Display: Almari View, Chart View, Grid View or List View */}
+        {viewMode === 'almari' ? (
+          <AlmariErrorBoundary fallbackTitle="Error loading Almari View" onReset={() => setViewMode('almari')}>
+            <AlmariView
+              books={books}
+              onOpenBook={onSelectBook}
+              onEditBook={onEditBook}
+              onOpenSuggestModal={() => setBulkModalMode('suggest_all_unassigned')}
+            />
+          </AlmariErrorBoundary>
+        ) : viewMode === 'chart' ? (
           <CatalogChartsView
             books={books}
             transactions={transactions}

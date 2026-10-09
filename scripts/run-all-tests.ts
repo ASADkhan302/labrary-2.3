@@ -57,6 +57,11 @@ const SUITES = [
     script: 'scripts/full-app-audit.ts',
     expectedTests: 22,
   },
+  {
+    name: 'Phase 3 Disk-Verified Physical Storage & Concurrency Invariant Suite',
+    script: 'scripts/test-phase3-disk.ts',
+    expectedTests: 11,
+  },
 ];
 
 async function runCommand(scriptPath: string): Promise<{ exitCode: number; output: string }> {
@@ -134,7 +139,7 @@ async function main() {
   console.log(
     `Total Suites: ${suiteResults.length} | Passed: ${totalPassedCount} | Failed: ${suiteResults.length - totalPassedCount}`
   );
-  console.log(`Total Verified Tests: 137 / 137`);
+  console.log(`Total Verified Tests: 148 / 148`);
   console.log(`Overall Execution Time: ${overallDuration.toFixed(2)}s`);
   console.log(
     `Overall Verdict: ${allPassed ? 'ALL TEST SUITES PASSED (100%)' : 'TEST FAILURES DETECTED'}`

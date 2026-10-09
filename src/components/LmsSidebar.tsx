@@ -13,7 +13,8 @@ import {
   PanelLeftOpen,
   Command,
   X,
-  GraduationCap
+  GraduationCap,
+  Library
 } from 'lucide-react';
 import { NavigationTab, Book } from '../types/library';
 import { ULM_CREST_SRC } from '../assets/brand/crestData';
@@ -124,6 +125,12 @@ export function LmsSidebar({
           icon: BookOpen, 
           badge: totalBooksCount,
           shortcut: '⌘1'
+        },
+        { 
+          id: 'almaris', 
+          title: 'Almaris & Shelves', 
+          icon: Library,
+          shortcut: '⌘A'
         },
         { 
           id: 'scanner', 

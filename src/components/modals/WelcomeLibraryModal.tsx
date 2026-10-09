@@ -24,6 +24,7 @@ interface WelcomeLibraryModalProps {
   missingPath?: string;
   onClose: () => void;
   onComplete: (message: string) => void;
+  onOpenStorageModal?: (option?: 'create_new' | 'open_existing') => void;
 }
 
 export const WelcomeLibraryModal: React.FC<WelcomeLibraryModalProps> = ({
@@ -32,6 +33,7 @@ export const WelcomeLibraryModal: React.FC<WelcomeLibraryModalProps> = ({
   missingPath = '',
   onClose,
   onComplete,
+  onOpenStorageModal,
 }) => {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
@@ -332,7 +334,13 @@ export const WelcomeLibraryModal: React.FC<WelcomeLibraryModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Option 1: Locate it */}
               <div 
-                onClick={() => locateFileInputRef.current?.click()}
+                onClick={() => {
+                  if (onOpenStorageModal) {
+                    onOpenStorageModal('open_existing');
+                  } else {
+                    locateFileInputRef.current?.click();
+                  }
+                }}
                 className="p-5 rounded-[14px] bg-[#141214] border border-white/10 hover:border-[#BC881B]/50 hover:bg-white/[0.02] transition-all cursor-pointer flex flex-col justify-between space-y-4 group relative"
               >
                 <div className="space-y-3">
@@ -380,7 +388,13 @@ export const WelcomeLibraryModal: React.FC<WelcomeLibraryModalProps> = ({
 
               {/* Option 3: Start as a beginner */}
               <div 
-                onClick={handleStartAsBeginner}
+                onClick={() => {
+                  if (onOpenStorageModal) {
+                    onOpenStorageModal('create_new');
+                  } else {
+                    handleStartAsBeginner();
+                  }
+                }}
                 className="p-5 rounded-[14px] bg-[#141214] border border-white/10 hover:border-white/25 hover:bg-white/[0.02] transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
               >
                 <div className="space-y-3">
@@ -431,7 +445,13 @@ export const WelcomeLibraryModal: React.FC<WelcomeLibraryModalProps> = ({
 
               {/* Option 2: Start as a beginner */}
               <div 
-                onClick={handleStartAsBeginner}
+                onClick={() => {
+                  if (onOpenStorageModal) {
+                    onOpenStorageModal('create_new');
+                  } else {
+                    handleStartAsBeginner();
+                  }
+                }}
                 className="p-5 rounded-[14px] bg-[#141214] border border-white/10 hover:border-[#BC881B]/50 hover:bg-white/[0.02] transition-all cursor-pointer flex flex-col justify-between space-y-4 group relative"
               >
                 <div className="space-y-3">

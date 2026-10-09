@@ -27,10 +27,11 @@ import {
   Bookmark,
   Calendar
 } from 'lucide-react';
-import { Book } from '../../types/library';
+import { Book, BookGroup, Almari } from '../../types/library';
 import { LibraryStorage } from '../../services/storage';
 import { BarcodeService } from '../../services/barcodeService';
 import { BookSheetService } from '../../services/bookSheetService';
+import { AlmariService } from '../../services/almariService';
 import CustomSelect from '../ui/CustomSelect';
 import { getTodayIso, formatDisplayDate, normalizeDateAdded } from '../../utils/dateUtils';
 import { isArabicOrUrduScript, sanitizeBidiOverrides } from '../../utils/urduUtils';
@@ -124,6 +125,12 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
   const [authorRoman, setAuthorRoman] = useState<string>('');
   const [description, setDescription] = useState<string>('');
 
+  // Book Groups & Almaris (Phase 1)
+  const [groupId, setGroupId] = useState<string>('');
+  const [almariId, setAlmariId] = useState<string>('');
+  const [shelfNo, setShelfNo] = useState<number>(1);
+  const [suggestedNotice, setSuggestedNotice] = useState<string | null>(null);
+
   // Media & Inventory
   const [totalQuantity, setTotalQuantity] = useState<number>(3);
   const [availableQuantity, setAvailableQuantity] = useState<number>(3);
@@ -188,6 +195,9 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       setRow(bookToEdit.row || 'A-1');
       setSection(bookToEdit.section || 'Main Stacks');
       setDeweyCallNumber(bookToEdit.dewey_call_number || '005.133 ULM');
+      setGroupId(bookToEdit.group_id || '');
+      setAlmariId(bookToEdit.almari_id || '');
+      setShelfNo(bookToEdit.shelf_no || 1);
       const editDate = bookToEdit.date_added || (bookToEdit.created_at ? bookToEdit.created_at.split(' ')[0] : getTodayIso());
       setDateAdded(editDate);
       setDateAddedRaw(formatDisplayDate(editDate));
@@ -208,6 +218,9 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
         source: string;
         category: string;
         dateAdded: string;
+        groupId: string;
+        almariId: string;
+        shelfNo: number;
       }> = {};
 
       if (lastEntryStr) {
@@ -236,12 +249,41 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       const initialDate = cachedValues.dateAdded || getTodayIso();
       setDateAdded(initialDate);
       setDateAddedRaw(formatDisplayDate(initialDate));
-      setCategory(cachedValues.category || 'Computer Science');
+      const initialCat = cachedValues.category || 'Computer Science';
+      setCategory(initialCat);
       setDeweyCallNumber('005.133 ULM');
       setShelf('CS-Rack-01');
       setRow('A-1');
       setSection('Main Stacks');
       setLanguage('English');
+
+      // Auto-suggest Group & Almari by rules, or keep last group and almari
+      let chosenGrpId = cachedValues.groupId || '';
+      let chosenAlmId = cachedValues.almariId || '';
+      let chosenShelf = cachedValues.shelfNo || 1;
+
+      if (!chosenGrpId) {
+        const suggestedGrp = AlmariService.suggestGroup({ category: initialCat, language: 'English' });
+        if (suggestedGrp) {
+          chosenGrpId = suggestedGrp.id;
+          const suggestedLoc = AlmariService.suggestAlmariAndShelf(suggestedGrp.id, allBooks);
+          if (suggestedLoc) {
+            chosenAlmId = suggestedLoc.almari.id;
+            chosenShelf = suggestedLoc.shelf_no;
+            setSuggestedNotice(`Suggested: ${suggestedGrp.name_en}, ${suggestedLoc.almari.code}, shelf ${suggestedLoc.shelf_no}`);
+          }
+        }
+      } else if (chosenGrpId && chosenAlmId) {
+        const almaris = AlmariService.getAlmaris();
+        const grps = AlmariService.getGroups();
+        const gName = grps.find(g => g.id === chosenGrpId)?.name_en || '';
+        const aCode = almaris.find(a => a.id === chosenAlmId)?.code || '';
+        setSuggestedNotice(`Suggested: ${gName}, ${aCode}, shelf ${chosenShelf}`);
+      }
+
+      setGroupId(chosenGrpId);
+      setAlmariId(chosenAlmId);
+      setShelfNo(chosenShelf);
       setDescription('');
       setBookImagePath('');
       setTotalQuantity(3);
@@ -482,10 +524,13 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
       row: row.trim(),
       section: section.trim(),
       dewey_call_number: deweyCallNumber.trim(),
+      group_id: groupId || null,
+      almari_id: almariId || null,
+      shelf_no: shelfNo ? Number(shelfNo) : null,
       date_added: dateRes.date!,
     };
 
-    // Cache common fields for fast successive ledger entry
+    // Cache common fields for fast successive ledger entry (Save & Next keeps the last group and almari)
     try {
       localStorage.setItem('ulm_lms_last_entry_cache', JSON.stringify({
         place,
@@ -495,7 +540,10 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
         bindingCode,
         source: sourceRemarks,
         category,
-        dateAdded: dateRes.date!
+        dateAdded: dateRes.date!,
+        groupId,
+        almariId,
+        shelfNo: Number(shelfNo) || 1,
       }));
     } catch {
       // Ignore cache storage error
@@ -1227,10 +1275,103 @@ export const AddEditBookModal: React.FC<AddEditBookModalProps> = ({
                   />
                 </div>
 
-                {/* Shelf & Row Coordinates */}
+                {/* Book Group (گروپ) */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300">
+                      Book Group (گروپ)
+                    </label>
+                    {groupId && (
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: AlmariService.getGroups().find(g => g.id === groupId)?.color || '#BC881B' }}
+                      />
+                    )}
+                  </div>
+                  <select
+                    value={groupId}
+                    onChange={(e) => {
+                      const newGid = e.target.value;
+                      setGroupId(newGid);
+                      if (newGid) {
+                        const allBooks = LibraryStorage.getBooks();
+                        const loc = AlmariService.suggestAlmariAndShelf(newGid, allBooks);
+                        if (loc) {
+                          setAlmariId(loc.almari.id);
+                          setShelfNo(loc.shelf_no);
+                          const gName = AlmariService.getGroups().find(g => g.id === newGid)?.name_en || '';
+                          setSuggestedNotice(`Suggested: ${gName}, ${loc.almari.code}, shelf ${loc.shelf_no}`);
+                        }
+                      }
+                    }}
+                    className="w-full bg-[#020617] border border-[#334155] rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="">(No group / Unassigned)</option>
+                    {AlmariService.getGroups().filter(g => g.is_active).map(g => (
+                      <option key={g.id} value={g.id}>
+                        {g.name_en} ({g.name_ur})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Almari (الماری) & Shelf No */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-300">
-                    Shelf Coordinate
+                    Almari (الماری) & Shelf
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={almariId}
+                      onChange={(e) => {
+                        setAlmariId(e.target.value);
+                      }}
+                      className="flex-1 bg-[#020617] border border-[#334155] rounded-lg px-2.5 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="">(No almari)</option>
+                      {AlmariService.getAlmaris().filter(a => a.is_active).map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.code} - {a.name_en}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[11px] text-slate-400 font-mono">Sh:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={shelfNo}
+                        onChange={(e) => setShelfNo(parseInt(e.target.value, 10) || 1)}
+                        className="w-12 bg-[#020617] border border-[#334155] rounded-lg px-1.5 py-2 text-xs font-mono text-center text-slate-200 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Auto-suggest note banner */}
+              {suggestedNotice && (
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="font-mono">{suggestedNotice}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSuggestedNotice(null)}
+                    className="text-amber-400 hover:text-white p-0.5 rounded"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
+                {/* Legacy Shelf text (synced with Almari) */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">
+                    Legacy Shelf Reference
                   </label>
                   <input
                     type="text"

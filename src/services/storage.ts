@@ -4,6 +4,7 @@ import { normalizeDateAdded, getTodayIso } from '../utils/dateUtils';
 import { computeSortKey, computeSearchText, sanitizeBidiOverrides, isArabicOrUrduScript } from '../utils/urduUtils';
 import { BarcodeService } from './barcodeService';
 import { BookSheetService } from './bookSheetService';
+import { AlmariService } from './almariService';
 
 const STORAGE_KEYS = {
   BOOKS: 'ulm_lms_books_v1',
@@ -33,6 +34,17 @@ export class LibraryStorage {
   private static booksRawString: string | null = null;
   private static historyCache: HistoryEntry[] | null = null;
   private static historyRawString: string | null = null;
+  private static mutationListeners: Array<() => void> = [];
+
+  static onMutation(listener: () => void): void {
+    this.mutationListeners.push(listener);
+  }
+
+  static notifyMutation(): void {
+    for (const fn of this.mutationListeners) {
+      try { fn(); } catch {}
+    }
+  }
 
   static clearBooksCache(): void {
     this.booksCache = null;
@@ -180,8 +192,19 @@ export class LibraryStorage {
       });
 
       if (migrationNeeded) {
-        this.saveBooks(migrated);
+        books = migrated;
         localStorage.setItem(STORAGE_KEYS.USER_VERSION, '3');
+      }
+
+      // Safe migration for Book Groups and Almaris (Phase 1 Data migration)
+      const almariMigration = AlmariService.migrateBooksWithGroupsAndAlmaris(books);
+      if (almariMigration.changesCount > 0) {
+        this.saveBooks(almariMigration.migrated);
+        return almariMigration.migrated;
+      }
+
+      if (migrationNeeded) {
+        this.saveBooks(migrated);
         return migrated;
       }
       return books;
@@ -194,6 +217,7 @@ export class LibraryStorage {
     this.booksCache = books;
     this.booksRawString = JSON.stringify(books);
     localStorage.setItem(STORAGE_KEYS.BOOKS, this.booksRawString);
+    this.notifyMutation();
   }
 
   static prependBook(newBook: Book, books: Book[]): void {
@@ -211,6 +235,7 @@ export class LibraryStorage {
     } else {
       this.saveBooks(books);
     }
+    this.notifyMutation();
   }
 
   static getBookByBarcode(barcode: string): Book | undefined {
@@ -294,6 +319,81 @@ export class LibraryStorage {
     };
   }
 
+  /**
+   * Pure function to clean, validate, and construct a complete Book record.
+   * Shared by both the Add Book form and the Excel Importer Engine to guarantee
+   * identical rules, fields, sort keys, and search collation.
+   */
+  static createBookRecord(
+    rawBook: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'is_active'>,
+    options?: {
+      id?: string;
+      barcode?: string;
+      accession_no?: string;
+      now?: string;
+      today?: string;
+    }
+  ): Book {
+    const today = options?.today || getTodayIso();
+    const now = options?.now || new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+    const accession_no = options?.accession_no || (rawBook.accession_no ? String(rawBook.accession_no).trim() : '');
+    const cleanBarcode = options?.barcode || (rawBook.barcode ? sanitizeBidiOverrides(rawBook.barcode).trim() : '');
+
+    const book_name = sanitizeBidiOverrides(rawBook.book_name).trim();
+    const author = sanitizeBidiOverrides(rawBook.author).trim();
+    const publisher = sanitizeBidiOverrides(rawBook.publisher || '').trim();
+    const description = sanitizeBidiOverrides(rawBook.description || '').trim();
+    const title_roman = rawBook.title_roman ? sanitizeBidiOverrides(rawBook.title_roman).trim() : undefined;
+    const author_roman = rawBook.author_roman ? sanitizeBidiOverrides(rawBook.author_roman).trim() : undefined;
+    const language = rawBook.language || (isArabicOrUrduScript(book_name) ? 'Urdu' : 'English');
+
+    const total_quantity = rawBook.total_quantity !== undefined ? rawBook.total_quantity : 1;
+    const available_quantity = rawBook.available_quantity !== undefined 
+      ? Math.min(rawBook.available_quantity, total_quantity)
+      : total_quantity;
+
+    return {
+      ...rawBook,
+      id: options?.id || this.generateId('book'),
+      barcode: cleanBarcode,
+      accession_no,
+      place: rawBook.place || '',
+      binding: rawBook.binding || 'HB',
+      pages: rawBook.pages,
+      price: rawBook.price,
+      source_remarks: rawBook.source_remarks || description,
+      import_batch_id: rawBook.import_batch_id,
+      imported_at: rawBook.imported_at,
+      book_name,
+      author,
+      publisher,
+      description,
+      language,
+      title_roman,
+      author_roman,
+      total_quantity,
+      available_quantity,
+      title_sort: computeSortKey(book_name),
+      author_sort: computeSortKey(author),
+      search_text: computeSearchText({
+        book_name,
+        author,
+        title_roman,
+        author_roman,
+        publisher,
+        category: rawBook.category,
+        barcode: cleanBarcode,
+        isbn: rawBook.isbn,
+        dewey_call_number: rawBook.dewey_call_number,
+      }),
+      date_added: rawBook.date_added || today,
+      created_at: now,
+      updated_at: now,
+      is_active: true,
+    };
+  }
+
   static addBook(book: Omit<Book, 'id' | 'created_at' | 'updated_at' | 'is_active'>): { success: boolean; message: string; book?: Book } {
     const books = this.getBooks();
     
@@ -331,57 +431,10 @@ export class LibraryStorage {
       }
     }
 
-    const today = getTodayIso();
-    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-    const book_name = sanitizeBidiOverrides(book.book_name).trim();
-    const author = sanitizeBidiOverrides(book.author).trim();
-    const publisher = sanitizeBidiOverrides(book.publisher || '').trim();
-    const description = sanitizeBidiOverrides(book.description || '').trim();
-    const title_roman = book.title_roman ? sanitizeBidiOverrides(book.title_roman).trim() : undefined;
-    const author_roman = book.author_roman ? sanitizeBidiOverrides(book.author_roman).trim() : undefined;
-    const language = book.language || (isArabicOrUrduScript(book_name) ? 'Urdu' : 'English');
-
-    const newBook: Book = {
-      ...book,
-      id: this.generateId('book'),
+    const newBook = this.createBookRecord(book, {
       barcode: cleanBarcode,
       accession_no,
-      place: book.place || '',
-      binding: book.binding || 'HB',
-      pages: book.pages,
-      price: book.price,
-      source_remarks: book.source_remarks || description,
-      import_batch_id: book.import_batch_id,
-      imported_at: book.imported_at,
-      book_name,
-      author,
-      publisher,
-      description,
-      language,
-      title_roman,
-      author_roman,
-      title_sort: computeSortKey(book_name),
-      author_sort: computeSortKey(author),
-      search_text: computeSearchText({
-        book_name,
-        author,
-        title_roman,
-        author_roman,
-        publisher,
-        category: book.category,
-        barcode: cleanBarcode,
-        isbn: book.isbn,
-        dewey_call_number: book.dewey_call_number,
-      }),
-      date_added: book.date_added || today,
-      created_at: now,
-      updated_at: now,
-      is_active: true,
-    };
-
-    // Ensure available does not exceed total
-    newBook.available_quantity = Math.min(newBook.available_quantity, newBook.total_quantity);
+    });
 
     this.prependBook(newBook, books);
 
@@ -401,6 +454,18 @@ export class LibraryStorage {
     });
 
     return { success: true, message: 'Book registered successfully.', book: newBook };
+  }
+
+  /**
+   * Batch insertion of pre-constructed, validated Book records in memory.
+   * Performs a single persist to localStorage and fires a single mutation notify.
+   */
+  static addBooksBatch(newBooks: Book[]): { success: boolean; count: number } {
+    if (!newBooks || newBooks.length === 0) return { success: true, count: 0 };
+    const books = this.getBooks();
+    const combined = [...newBooks, ...books];
+    this.saveBooks(combined);
+    return { success: true, count: newBooks.length };
   }
 
   static updateBook(id: string, updates: Partial<Book>): { success: boolean; message: string; book?: Book } {
@@ -469,6 +534,24 @@ export class LibraryStorage {
     };
 
     this.saveBooks(books);
+
+    // Track Almari & Shelf location history if moved
+    if (
+      (updates.almari_id !== undefined && updates.almari_id !== current.almari_id) ||
+      (updates.shelf_no !== undefined && updates.shelf_no !== current.shelf_no)
+    ) {
+      const almaris = AlmariService.getAlmaris();
+      const fromAlm = almaris.find(a => a.id === current.almari_id);
+      const toAlm = almaris.find(a => a.id === updates.almari_id);
+      const fromStr = fromAlm ? `${fromAlm.code}, Shelf ${current.shelf_no || 1}` : (current.shelf || 'No almari');
+      const toStr = toAlm ? `${toAlm.code}, Shelf ${updates.shelf_no || 1}` : 'No almari';
+      AlmariService.recordMove({
+        book_id: id,
+        from: fromStr,
+        to: toStr,
+        reason: 'Book edit or relocation',
+      });
+    }
 
     this.logHistory({
       action: 'BOOK_UPDATED',
@@ -599,6 +682,7 @@ export class LibraryStorage {
 
   static saveBorrowers(borrowers: Borrower[]): void {
     localStorage.setItem(STORAGE_KEYS.BORROWERS, JSON.stringify(borrowers));
+    this.notifyMutation();
   }
 
   static addBorrower(borrower: Omit<Borrower, 'id' | 'created_at' | 'updated_at' | 'is_active'>): { success: boolean; message: string; borrower?: Borrower; existingBorrowerId?: string } {
@@ -840,6 +924,7 @@ export class LibraryStorage {
 
   static saveTransactions(txs: Transaction[]): void {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+    this.notifyMutation();
   }
 
   static issueBook(bookId: string, borrowerId: string, daysToLoan: number = 14): { success: boolean; message: string; transaction?: Transaction } {
@@ -1033,6 +1118,7 @@ export class LibraryStorage {
     this.historyCache = history;
     this.historyRawString = JSON.stringify(history);
     localStorage.setItem(STORAGE_KEYS.HISTORY, this.historyRawString);
+    this.notifyMutation();
   }
 
   // --- Settings ---
@@ -1059,6 +1145,7 @@ export class LibraryStorage {
     delete (cleanSettings as any).theme;
     delete (cleanSettings as any).light_theme_style;
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(cleanSettings));
+    this.notifyMutation();
   }
 
   // --- Reset to Complete First-Time App Opening State ---

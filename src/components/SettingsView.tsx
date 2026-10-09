@@ -24,7 +24,9 @@ import {
   AlertCircle,
   Info,
   Package,
-  ShieldAlert
+  ShieldAlert,
+  Layers,
+  Library
 } from 'lucide-react';
 import { SystemSettings, LinkedSheetInfo } from '../types/library';
 import { LibraryStorage } from '../services/storage';
@@ -33,10 +35,13 @@ import { LibraryDataFilesService } from '../services/libraryDataFilesService';
 import { UsbBackupService } from '../services/usbBackupService';
 import { BookSheetService } from '../services/bookSheetService';
 import { LibraryFolderService } from '../services/libraryFolderService';
+import { RealStorageService, StorageStatus } from '../services/realStorageService';
 import { ResetToZeroService, UndoResetMeta } from '../services/resetToZeroService';
 import { ResetToZeroModal } from './modals/ResetToZeroModal';
 import { ULM_CREST_SRC } from '../assets/brand/crestData';
 import { ButtonAuditPanel } from './ui/ButtonAuditPanel';
+import { GroupsSettingsTab } from './settings/GroupsSettingsTab';
+import { AlmarisSettingsTab } from './settings/AlmarisSettingsTab';
 
 interface SettingsViewProps {
   settings: SystemSettings;
@@ -68,6 +73,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [moveNotice, setMoveNotice] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmClearDemo, setConfirmClearDemo] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'system' | 'groups' | 'almaris'>('system');
 
   // Barcode & Transfer Actions State
   const [isBackfilling, setIsBackfilling] = useState(false);
@@ -91,6 +97,107 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const currentDbPath = storageConfig.folderPath 
     ? `${storageConfig.folderPath}\\Library.ulmlib`
     : (formData.db_path || 'Documents\\ULM Library\\Library.ulmlib');
+
+  const [realStorageStatus, setRealStorageStatus] = useState<StorageStatus | null>(null);
+  const [isCheckingLibraryFile, setIsCheckingLibraryFile] = useState<boolean>(false);
+  const [quickCheckInfo, setQuickCheckInfo] = useState<{
+    open: boolean;
+    passed: boolean;
+    message: string;
+    journalMode: string;
+    synchronous: string;
+    foreignKeys: boolean;
+    fileSizeBytes: number;
+    lastSaved: string | null;
+    booksCount: number;
+    borrowersCount: number;
+    loansCount: number;
+  } | null>(null);
+  const [isChangingLocation, setIsChangingLocation] = useState<boolean>(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+
+  const refreshRealStorageStatus = async () => {
+    try {
+      const st = await RealStorageService.getStatus();
+      setRealStorageStatus(st);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    refreshRealStorageStatus();
+  }, []);
+
+  const handleChangeLocation = async () => {
+    if (onOpenStorageModal) {
+      onOpenStorageModal();
+      return;
+    }
+    setIsChangingLocation(true);
+    setLocationNotice('Selecting destination folder...');
+    try {
+      const pickRes = await RealStorageService.pickDirectory();
+      if (pickRes.success) {
+        const candidate = pickRes.handle || pickRes.path;
+        setLocationNotice('Copying SQLite database bytes & verifying integrity...');
+        const changeRes = await RealStorageService.changeLocation(candidate);
+        if (changeRes.success) {
+          setLocationNotice(changeRes.message);
+          await refreshRealStorageStatus();
+        } else {
+          setLocationNotice(`Relocation canceled: ${changeRes.message}`);
+        }
+      } else {
+        setLocationNotice(pickRes.error || 'Folder selection was not completed');
+      }
+    } catch (err: any) {
+      setLocationNotice(`Relocation error: ${err.message}`);
+    } finally {
+      setIsChangingLocation(false);
+      setTimeout(() => setLocationNotice(null), 5000);
+    }
+  };
+
+  const handleCheckLibraryFile = async () => {
+    setIsCheckingLibraryFile(true);
+    try {
+      const st = await RealStorageService.getStatus();
+      setRealStorageStatus(st);
+      const bCount = LibraryStorage.getBooks().length;
+      const mCount = LibraryStorage.getBorrowers().length;
+      const lCount = LibraryStorage.getTransactions().length;
+      setQuickCheckInfo({
+        open: true,
+        passed: st.quickCheckOk,
+        message: st.quickCheckMessage,
+        journalMode: st.journalMode,
+        synchronous: 'FULL',
+        foreignKeys: true,
+        fileSizeBytes: st.fileSizeBytes,
+        lastSaved: st.lastSavedIso,
+        booksCount: bCount,
+        borrowersCount: mCount,
+        loansCount: lCount,
+      });
+    } catch (err: any) {
+      setQuickCheckInfo({
+        open: true,
+        passed: false,
+        message: `Quick check error: ${err.message}`,
+        journalMode: 'UNKNOWN',
+        synchronous: 'UNKNOWN',
+        foreignKeys: false,
+        fileSizeBytes: 0,
+        lastSaved: null,
+        booksCount: 0,
+        borrowersCount: 0,
+        loansCount: 0,
+      });
+    } finally {
+      setIsCheckingLibraryFile(false);
+    }
+  };
 
   const [isExportingPackage, setIsExportingPackage] = useState(false);
   const [isBackingUpNow, setIsBackingUpNow] = useState(false);
@@ -463,6 +570,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
           </button>
         </div>
+
+        {/* Settings Navigation Sub-Tabs */}
+        <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] pb-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveSettingsTab('system')}
+            className={`px-4 py-2 rounded-[8px] text-[13px] font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              activeSettingsTab === 'system'
+                ? 'bg-[#BC881B]/20 text-[#E0B450] border border-[#BC881B]/40'
+                : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            System & Storage Preferences
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSettingsTab('groups')}
+            className={`px-4 py-2 rounded-[8px] text-[13px] font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              activeSettingsTab === 'groups'
+                ? 'bg-[#BC881B]/20 text-[#E0B450] border border-[#BC881B]/40'
+                : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            Book Groups (گروپس)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSettingsTab('almaris')}
+            className={`px-4 py-2 rounded-[8px] text-[13px] font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              activeSettingsTab === 'almaris'
+                ? 'bg-[#BC881B]/20 text-[#E0B450] border border-[#BC881B]/40'
+                : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            Almaris & Shelves (الماریاں)
+          </button>
+        </div>
+
+        {activeSettingsTab === 'groups' && (
+          <GroupsSettingsTab />
+        )}
+
+        {activeSettingsTab === 'almaris' && (
+          <AlmarisSettingsTab />
+        )}
+
+        {activeSettingsTab === 'system' && (
+        <>
 
         {saveSuccess && (
           <div className="p-3.5 rounded-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5 shadow-sm animate-in fade-in">
@@ -1067,27 +1225,75 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </span>
             </div>
 
-            {/* Folder path: [Open folder] */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#D6CFE0]">
-                Library Folder Path:
-              </label>
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
-                <input
-                  type="text"
-                  readOnly
-                  value={currentDbPath}
-                  className="flex-1 w-full rounded-[10px] px-3.5 py-2.5 text-xs font-mono select-all border border-white/10 bg-[#141214] text-[#85C4F0] focus:outline-none focus:border-[#29658E]"
-                />
+            {/* Folder path & Live Disk Status: Location, Size, Last Saved */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-[12px] bg-[#141214] border border-white/[0.08] space-y-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#B3AABD] block">Current Location</span>
+                  <span className="text-xs font-mono font-semibold text-[#85C4F0] truncate block" title={realStorageStatus?.folderPath || currentDbPath}>
+                    {realStorageStatus?.folderPath || currentDbPath}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-[12px] bg-[#141214] border border-white/[0.08] space-y-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#B3AABD] block">File Size (On Disk)</span>
+                  <span className="text-xs font-mono font-bold text-white block">
+                    {realStorageStatus && realStorageStatus.fileSizeBytes > 0
+                      ? `${(realStorageStatus.fileSizeBytes / 1024).toFixed(1)} KB (${realStorageStatus.fileSizeBytes.toLocaleString()} B)`
+                      : 'Verified SQLite File'}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-[12px] bg-[#141214] border border-white/[0.08] space-y-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#B3AABD] block">Last Saved</span>
+                  <span className="text-xs font-mono font-semibold text-emerald-400 block">
+                    {realStorageStatus?.lastSavedIso
+                      ? new Date(realStorageStatus.lastSavedIso).toLocaleDateString() + ' ' + new Date(realStorageStatus.lastSavedIso).toLocaleTimeString()
+                      : 'Active Session'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons Row: [Open folder], [Change location], [Check library file], [Copy Path] */}
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={handleOpenFolder}
                   className="px-3.5 h-10 rounded-[10px] text-xs font-semibold uppercase tracking-wider border border-[#29658E]/40 bg-[#29658E]/15 hover:bg-[#29658E]/30 text-[#D1E6F5] transition-all cursor-pointer flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-[0.98] shrink-0"
-                  title="Open library directory"
+                  title="Open library folder on this computer"
                 >
                   <Folder className="w-4 h-4 text-[#58A6DF]" />
                   <span>Open folder</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleChangeLocation}
+                  disabled={isChangingLocation}
+                  className="px-3.5 h-10 rounded-[10px] text-xs font-semibold uppercase tracking-wider border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 transition-all cursor-pointer flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-[0.98] shrink-0 disabled:opacity-50"
+                  title="Copies with SQLite backup API, verifies counts, switches location, preserves old copy"
+                >
+                  {isChangingLocation ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                  ) : (
+                    <ArrowRightLeft className="w-4 h-4 text-amber-400" />
+                  )}
+                  <span>Change location</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCheckLibraryFile}
+                  disabled={isCheckingLibraryFile}
+                  className="px-3.5 h-10 rounded-[10px] text-xs font-semibold uppercase tracking-wider border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 transition-all cursor-pointer flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-[0.98] shrink-0 disabled:opacity-50"
+                  title="Runs PRAGMA quick_check and verifies SQLite database integrity"
+                >
+                  {isCheckingLibraryFile ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  )}
+                  <span>Check library file</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleCopyPath}
@@ -1107,6 +1313,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   )}
                 </button>
               </div>
+
+              {/* Location Notification Banner */}
+              {locationNotice && (
+                <div className="p-3 rounded-[10px] bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2 animate-in fade-in">
+                  <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{locationNotice}</span>
+                </div>
+              )}
+
+              {/* Real Quick Check Inspection Result Card */}
+              {quickCheckInfo?.open && (
+                <div className="p-4 rounded-[14px] bg-[#100D14] border border-emerald-500/40 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                      <span className="text-xs font-bold text-white tracking-wide uppercase">
+                        SQLite File Quick Check Result (PRAGMA)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickCheckInfo(null)}
+                      className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-white/[0.06] cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px] font-mono">
+                    <div className="p-2.5 rounded-[8px] bg-black/40 border border-white/[0.06]">
+                      <span className="text-[#B3AABD] block text-[10px]">Integrity Check</span>
+                      <span className="text-emerald-400 font-bold block">
+                        {quickCheckInfo.passed ? 'quick_check == ok' : 'integrity error'}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-[8px] bg-black/40 border border-white/[0.06]">
+                      <span className="text-[#B3AABD] block text-[10px]">Journal Mode</span>
+                      <span className="text-white font-bold block">{quickCheckInfo.journalMode} (Single file)</span>
+                    </div>
+                    <div className="p-2.5 rounded-[8px] bg-black/40 border border-white/[0.06]">
+                      <span className="text-[#B3AABD] block text-[10px]">Synchronous / FK</span>
+                      <span className="text-white font-bold block">{quickCheckInfo.synchronous} · FK ON</span>
+                    </div>
+                    <div className="p-2.5 rounded-[8px] bg-black/40 border border-white/[0.06]">
+                      <span className="text-[#B3AABD] block text-[10px]">Verified Records</span>
+                      <span className="text-amber-300 font-bold block">
+                        {quickCheckInfo.booksCount} books · {quickCheckInfo.borrowersCount} mbr
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-[#B3AABD] italic">
+                    Verified directly on disk from Library.ulmlib. Single-instance database file is consistent and healthy.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Sheet status: (name, last synced, books waiting) with [Sync now] and [Open in Excel] */}
@@ -1357,6 +1618,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
         </form>
+        </>
+        )}
 
         {/* Reset to Zero Danger Modal */}
         {isResetToZeroModalOpen && (

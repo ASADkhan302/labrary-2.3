@@ -17,6 +17,10 @@ export interface Book {
   row: string;
   section: string;
   dewey_call_number: string;
+  // Book Groups & Almaris
+  group_id?: string | null;
+  almari_id?: string | null;
+  shelf_no?: number | null;
   date_added?: string; // YYYY-MM-DD local date
   title_roman?: string;
   author_roman?: string;
@@ -163,4 +167,51 @@ export type NavigationTab =
   | 'reports'
   | 'scanner'
   | 'excel'
-  | 'settings';
+  | 'settings'
+  | 'almaris';
+
+// ============================================================================
+// PART A: BOOK GROUPS & ALMARIS (الماری) TYPES
+// ============================================================================
+
+export interface BookGroup {
+  id: string;
+  name_en: string;
+  name_ur: string;
+  color: string;
+  sort_order: number;
+  is_active: boolean;
+  match_category?: string; // Optional suggestion rule: category name to match
+  match_language?: string; // Optional suggestion rule: language to match
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Almari {
+  id: string;
+  code: string; // A-01, A-02...
+  name_en: string;
+  name_ur: string;
+  shelf_count: number;
+  books_per_shelf: number; // Guidance capacity
+  notes?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AlmariGroup {
+  id: string;
+  almari_id: string;
+  group_id: string;
+}
+
+export interface BookLocationHistory {
+  id: string;
+  book_id: string;
+  from: string; // e.g. "Unassigned" or "A-01, Shelf 2"
+  to: string; // e.g. "A-06, Shelf 3"
+  moved_at: string;
+  reason?: string;
+}
+

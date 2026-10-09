@@ -40,7 +40,7 @@ import { LibraryFolderService } from './services/libraryFolderService';
 
 export default function App() {
   // Valid navigation tabs (developer screens removed)
-  const VALID_TABS: NavigationTab[] = ['catalog', 'circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings'];
+  const VALID_TABS: NavigationTab[] = ['catalog', 'circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings', 'almaris'];
 
   // Navigation (if a removed screen was previously saved as last visited view, fallback to catalog)
   const [activeTab, setActiveTab] = useState<NavigationTab>(() => {
@@ -51,7 +51,7 @@ export default function App() {
         localStorage.removeItem('ulm_lms_active_view');
         return 'catalog';
       }
-      if (savedTab && ['catalog', 'circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings'].includes(savedTab)) {
+      if (savedTab && ['catalog', 'circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings', 'almaris'].includes(savedTab)) {
         return savedTab as NavigationTab;
       }
     } catch {}
@@ -88,6 +88,7 @@ export default function App() {
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [isMissingLibrary, setIsMissingLibrary] = useState(false);
   const [missingLibraryPath, setMissingLibraryPath] = useState('');
+  const [storageModalOption, setStorageModalOption] = useState<'create_new' | 'open_existing'>('create_new');
 
   // Database Storage Location State (Configurable on startup and anytime)
   const [storageConfig, setStorageConfig] = useState<StorageLocationConfig>(() => LibraryStorage.getStorageLocation());
@@ -526,10 +527,11 @@ export default function App() {
               isScreenExiting ? 'screen-view-exit' : 'screen-view-enter'
             }`}
           >
-        {(activeTab === 'catalog' || !['circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings'].includes(activeTab)) && (
+        {(activeTab === 'catalog' || activeTab === 'almaris' || !['circulation', 'borrowers', 'reports', 'scanner', 'excel', 'settings'].includes(activeTab)) && (
           <BooksCatalogView
             books={books}
             transactions={transactions}
+            initialViewMode={activeTab === 'almaris' ? 'almari' : undefined}
             onSelectBook={(book) => setSelectedBookForDetails(book)}
             onEditBook={(book) => {
               setBookToEdit(book);
@@ -743,6 +745,7 @@ export default function App() {
       {/* Database Storage Location Configuration Modal */}
       <StorageLocationModal
         isOpen={isStorageModalOpen}
+        initialOption={storageModalOption}
         onClose={() => setIsStorageModalOpen(false)}
         onLocationSaved={handleStorageLocationSaved}
       />
@@ -805,6 +808,12 @@ export default function App() {
         isOpen={isWelcomeModalOpen}
         isMissingPath={isMissingLibrary}
         missingPath={missingLibraryPath}
+        onOpenStorageModal={(opt) => {
+          setIsWelcomeModalOpen(false);
+          setIsMissingLibrary(false);
+          setStorageModalOption(opt || 'create_new');
+          setIsStorageModalOpen(true);
+        }}
         onClose={() => {
           setIsWelcomeModalOpen(false);
           setIsMissingLibrary(false);

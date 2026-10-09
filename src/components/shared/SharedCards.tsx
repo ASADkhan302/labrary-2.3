@@ -113,6 +113,9 @@ export interface KpiCardProps {
   icon?: LucideIcon;
   iconColor?: string;
   accentBarColor?: string;
+  accentColor?: string; // Hex color for top right soft glow
+  note?: string; // Short note on same baseline as big number (e.g., "Distinct records", "Physical items")
+  fractionTooltip?: string; // Tooltip for fraction bar
   percentBar?: {
     value: number;
     max: number;
@@ -124,6 +127,7 @@ export interface KpiCardProps {
     label: string;
   };
   isDanger?: boolean;
+  isGoldNumber?: boolean; // Gold when active loans > 0
   className?: string;
 }
 
@@ -134,16 +138,26 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   icon: Icon,
   iconColor = '#E0B450',
   accentBarColor,
+  accentColor = '#BC881B',
+  note,
+  fractionTooltip,
   percentBar,
   trend,
   isDanger = false,
+  isGoldNumber = false,
   className = '',
 }) => {
+  const fractionText = fractionTooltip || (percentBar ? `${percentBar.value.toLocaleString()} / ${percentBar.max.toLocaleString()}` : '');
+
   return (
     <div
-      className={`relative rounded-[14px] bg-[#1A1A1A] border ${
-        isDanger ? 'border-rose-500/40 bg-rose-950/10' : 'border-[#2E2A33]'
-      } p-4 sm:p-5 flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.35)] overflow-hidden transition-all duration-[180ms] hover:border-[#6F6879] ${className}`}
+      className={`relative rounded-[14px] bg-[var(--surface-1)] border border-[var(--border-subtle)] p-[18px_20px] flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.35)] overflow-hidden transition-all duration-200 hover:border-[#6F6879] group ${
+        isDanger ? 'border-rose-500/40 bg-rose-950/10' : ''
+      } ${className}`}
+      style={{
+        // Soft glow in the card's accent color at the top right (radial gradient, 8-10% alpha)
+        backgroundImage: `radial-gradient(circle at top right, ${isDanger ? 'rgba(251, 113, 133, 0.10)' : accentColor ? `${accentColor}18` : 'rgba(188, 136, 27, 0.10)'} 0%, transparent 65%)`,
+      }}
     >
       {accentBarColor && (
         <div 
@@ -152,38 +166,49 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         />
       )}
 
-      {/* Top Header */}
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-[11px] font-semibold text-[#B3AABD] uppercase tracking-[0.06em]">
+      {/* Row 1: Label on the left (12px uppercase, .06em tracking, muted-light); on right an icon (18px) in 32px rounded square */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[12px] font-semibold text-[#B3AABD] uppercase tracking-[0.06em] truncate">
           {label}
         </span>
         {Icon && (
           <div 
-            className="w-9 h-9 rounded-[9px] flex items-center justify-center shrink-0 border"
+            className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 border"
             style={{
-              backgroundColor: isDanger ? 'rgba(251, 113, 133, 0.15)' : 'rgba(188, 136, 27, 0.15)',
-              borderColor: isDanger ? 'rgba(251, 113, 133, 0.3)' : 'rgba(188, 136, 27, 0.3)',
+              backgroundColor: isDanger ? 'rgba(251, 113, 133, 0.15)' : accentColor ? `${accentColor}18` : 'rgba(188, 136, 27, 0.15)',
+              borderColor: isDanger ? 'rgba(251, 113, 133, 0.35)' : accentColor ? `${accentColor}40` : 'rgba(188, 136, 27, 0.35)',
               color: isDanger ? '#FB7185' : iconColor,
             }}
           >
-            <Icon className="w-4 h-4 stroke-[2]" />
+            <Icon className="w-[18px] h-[18px] stroke-[2]" />
           </div>
         )}
       </div>
 
-      {/* Value & Trend */}
-      <div className="my-2 flex items-baseline justify-between gap-3 flex-wrap">
+      {/* Row 2: BIG NUMBER in display serif, followed on the SAME baseline by a short note (12-13px, 10px space) */}
+      <div className="mt-2 mb-3 flex items-baseline gap-[10px] flex-wrap">
         <div 
-          className={`text-[28px] sm:text-[32px] font-bold font-mono tracking-tight tabular-nums leading-none ${
-            isDanger ? 'text-rose-400' : 'text-white'
+          className={`font-semibold tracking-tight tabular-nums leading-[1.05] ${
+            isDanger ? 'text-rose-400' : isGoldNumber ? 'text-[#E0B450]' : 'text-white'
           }`}
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontVariantNumeric: 'lining-nums tabular-nums',
+            fontSize: 'clamp(34px, 2.8vw, 46px)',
+          }}
         >
-          <CountUp end={value} durationMs={600} />
+          {value.toLocaleString()}
         </div>
+
+        {note && (
+          <span className="text-[12px] sm:text-[13px] text-[#B3AABD] font-normal leading-normal select-none">
+            {note}
+          </span>
+        )}
 
         {trend && (
           <div
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold ml-auto ${
               trend.direction === 'up'
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                 : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
@@ -199,24 +224,34 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         )}
       </div>
 
-      {/* Optional Slim Bar */}
+      {/* Row 3: 4px rounded bar (surface-3 track, gradient fill in accent color) with tooltip stating the fraction */}
       {percentBar && (
-        <div className="space-y-1 mb-2">
-          <div className="w-full bg-white/[0.08] h-1.5 rounded-full overflow-hidden">
+        <div className="space-y-1" title={fractionText}>
+          <div className="w-full bg-[var(--surface-3)] h-1 rounded-full overflow-hidden relative">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${Math.min(100, Math.max(0, percentBar.max > 0 ? (percentBar.value / percentBar.max) * 100 : 0))}%`,
-                backgroundColor: percentBar.color || '#34D399',
+                background: isDanger
+                  ? 'linear-gradient(90deg, #F43F5E, #FB7185)'
+                  : percentBar.color
+                  ? percentBar.color
+                  : `linear-gradient(90deg, ${accentColor || '#BC881B'}, #E0B450)`,
               }}
             />
           </div>
+          {fractionText && (
+            <div className="flex justify-between items-center text-[11px] text-[var(--text-muted)] pt-0.5 font-mono">
+              <span className="truncate">{fractionText}</span>
+              <span>{Math.round(percentBar.max > 0 ? (percentBar.value / percentBar.max) * 100 : 0)}%</span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Subtitle / Sub-label */}
-      {subLabel && (
-        <div className="text-[12px] text-[#B3AABD] leading-snug font-sans">
+      {/* Subtitle / Sub-label fallback */}
+      {!percentBar && subLabel && (
+        <div className="text-[12px] text-[#B3AABD] leading-snug font-sans pt-1">
           {subLabel}
         </div>
       )}
